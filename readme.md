@@ -1,4 +1,4 @@
-# TriPiyo backend
+# Samay backend
 
 ## Env setup
 
