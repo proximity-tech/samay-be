@@ -1,8 +1,8 @@
 import fp from "fastify-plugin";
-import jwt from "jsonwebtoken";
 import { FastifyPluginAsync } from "fastify";
-import { publicRoutes } from "./routes";
+import { publicRoutes, adminRoutes } from "./routes";
 import { JWTPayload } from "./types";
+import { AuthService } from "../services/auth-service";
 
 declare module "fastify" {
   interface FastifyRequest {
@@ -11,31 +11,42 @@ declare module "fastify" {
   }
 }
 
-const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key";
-
 const authMiddleware: FastifyPluginAsync = fp(async (fastify) => {
   console.log("Auth middleware initialized");
   fastify.addHook("preHandler", async (request, reply) => {
     const url = request.raw.url || "";
     const method = request.raw.method || "GET";
+    
     if (publicRoutes.includes(url)) {
       return; // Skip authentication for public routes
     }
+    
     try {
       const authHeader = request.headers.authorization;
-      console.log({ headers: request.headers });
-      if (!authHeader) throw new Error();
+      if (!authHeader) throw new Error("No authorization header");
+      
       const token = authHeader.split(" ")[1];
-      const decoded = jwt.verify(token, JWT_SECRET) as JWTPayload;
-      if (decoded.role == "USER") {
+      if (!token) throw new Error("No token provided");
+      
+      const user = await AuthService.validateToken(token, fastify.prisma);
+      if (!user) throw new Error("Invalid token");
+      
+      const payload: JWTPayload = {
+        userId: user.id,
+        role: user.role,
+      };
+      
+      // Check admin routes access
+      if (payload.role === "USER") {
         // eslint-disable-next-line @typescript-eslint/ban-ts-comment
         //@ts-ignore
         if (adminRoutes[method]?.[url]) {
           return reply.status(403).send({ error: "Forbidden" });
         }
       }
-      request.user = decoded;
-    } catch {
+      
+      request.user = payload;
+    } catch (error) {
       reply.status(401).send({ error: "Unauthorized" });
     }
   });
