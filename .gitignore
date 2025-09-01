@@ -7,3 +7,6 @@ node_modules
 /generated/prisma
 dist
 /src/generated/prisma
+
+# Developer documentation (not committed to git)
+docs/
