@@ -48,14 +48,17 @@ export class AuthService {
     // Create session
     await this.createSession(user.id, token, prisma);
 
+    // Destructure user object for response
+    const { id, email: userEmail, name: userName, mobile: userMobile, role: userRole, createdAt } = user;
+
     return {
       user: {
-        id: user.id,
-        email: user.email,
-        name: user.name,
-        mobile: user.mobile,
-        role: user.role,
-        createdAt: user.createdAt,
+        id,
+        email: userEmail,
+        name: userName,
+        mobile: userMobile,
+        role: userRole,
+        createdAt,
       },
       token,
     };
@@ -89,14 +92,17 @@ export class AuthService {
     // Create session
     await this.createSession(user.id, token, prisma);
 
+    // Destructure user object for response
+    const { id, email: userEmail, name: userName, mobile: userMobile, role: userRole, createdAt } = user;
+
     return {
       user: {
-        id: user.id,
-        email: user.email,
-        name: user.name,
-        mobile: user.mobile,
-        role: user.role,
-        createdAt: user.createdAt,
+        id,
+        email: userEmail,
+        name: userName,
+        mobile: userMobile,
+        role: userRole,
+        createdAt,
       },
       token,
     };
@@ -120,7 +126,7 @@ export class AuthService {
    */
   static async validateToken(token: string, prisma: PrismaClient): Promise<User | null> {
     try {
-      const decoded = jwt.verify(token, JWT_SECRET) as { userId: string };
+      jwt.verify(token, JWT_SECRET) as { userId: string };
       
       // Check if session exists and is not expired
       const session = await prisma.session.findFirst({
@@ -140,7 +146,7 @@ export class AuthService {
       }
 
       return session.user;
-    } catch (error) {
+    } catch {
       return null;
     }
   }
