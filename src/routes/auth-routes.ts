@@ -1,5 +1,6 @@
 import { FastifyPluginAsync } from "fastify";
-import { AuthService, registerSchema, loginSchema } from "../services/auth-service";
+import { AuthService } from "../services/auth-service";
+import { registerSchema, loginSchema, AuthError } from "../types/auth-types";
 
 const authRoutes: FastifyPluginAsync = async (fastify) => {
   // Register user
@@ -15,12 +16,21 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
           data: result,
         });
       } catch (error) {
+        if (error instanceof AuthError) {
+          return reply.status(error.statusCode).send({
+            success: false,
+            error: error.message,
+            code: error.code,
+          });
+        }
+        
         if (error instanceof Error) {
           return reply.status(400).send({
             success: false,
             error: error.message,
           });
         }
+        
         return reply.status(500).send({
           success: false,
           error: "Internal server error",
@@ -42,13 +52,21 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
           data: result,
         });
       } catch (error) {
+        if (error instanceof AuthError) {
+          return reply.status(error.statusCode).send({
+            success: false,
+            error: error.message,
+            code: error.code,
+          });
+        }
+        
         if (error instanceof Error) {
-          const statusCode = error.message.includes("Invalid") ? 401 : 400;
-          return reply.status(statusCode).send({
+          return reply.status(400).send({
             success: false,
             error: error.message,
           });
         }
+        
         return reply.status(500).send({
           success: false,
           error: "Internal server error",
@@ -78,6 +96,14 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
           message: "Logged out successfully",
         });
       } catch (error) {
+        if (error instanceof AuthError) {
+          return reply.status(error.statusCode).send({
+            success: false,
+            error: error.message,
+            code: error.code,
+          });
+        }
+        
         return reply.status(500).send({
           success: false,
           error: "Internal server error",
@@ -99,30 +125,21 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
           });
         }
 
-        // Get fresh user data from database
-        const userData = await fastify.prisma.user.findUnique({
-          where: { id: user.userId },
-          select: {
-            id: true,
-            email: true,
-            name: true,
-            role: true,
-            createdAt: true,
-          },
-        });
-
-        if (!userData) {
-          return reply.status(401).send({
-            success: false,
-            error: "User not found",
-          });
-        }
+        const userData = await AuthService.getCurrentUser(user.userId, fastify.prisma);
 
         return reply.send({
           success: true,
           data: userData,
         });
       } catch (error) {
+        if (error instanceof AuthError) {
+          return reply.status(error.statusCode).send({
+            success: false,
+            error: error.message,
+            code: error.code,
+          });
+        }
+        
         return reply.status(500).send({
           success: false,
           error: "Internal server error",

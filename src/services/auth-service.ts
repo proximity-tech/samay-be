@@ -1,35 +1,16 @@
 import { PrismaClient, User } from "@prisma/client";
 import * as argon2 from "argon2";
 import jwt from "jsonwebtoken";
-import { z } from "zod";
+import { 
+  RegisterInput, 
+  LoginInput, 
+  AuthResponse, 
+  UserResponse,
+  AuthError 
+} from "../types/auth-types";
 
 const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key";
 const JWT_EXPIRES_IN = "7d";
-
-// Validation schemas
-export const registerSchema = z.object({
-  email: z.string().email(),
-  password: z.string().min(8),
-  name: z.string().min(1).optional(),
-});
-
-export const loginSchema = z.object({
-  email: z.string().email(),
-  password: z.string(),
-});
-
-export type RegisterInput = z.infer<typeof registerSchema>;
-export type LoginInput = z.infer<typeof loginSchema>;
-
-export interface AuthResponse {
-  user: {
-    id: string;
-    email: string;
-    name: string | null;
-    role: string;
-  };
-  token: string;
-}
 
 export class AuthService {
 
@@ -37,7 +18,7 @@ export class AuthService {
    * Register a new user
    */
   static async register(input: RegisterInput, prisma: PrismaClient): Promise<AuthResponse> {
-    const { email, password, name } = input;
+    const { email, password, name, mobile } = input;
 
     // Check if user already exists
     const existingUser = await prisma.user.findUnique({
@@ -45,7 +26,7 @@ export class AuthService {
     });
 
     if (existingUser) {
-      throw new Error("User with this email already exists");
+      throw new AuthError("User with this email already exists", 409, "USER_EXISTS");
     }
 
     // Hash password
@@ -57,6 +38,7 @@ export class AuthService {
         email,
         password: hashedPassword,
         name,
+        mobile,
       },
     });
 
@@ -71,7 +53,9 @@ export class AuthService {
         id: user.id,
         email: user.email,
         name: user.name,
+        mobile: user.mobile,
         role: user.role,
+        createdAt: user.createdAt,
       },
       token,
     };
@@ -89,14 +73,14 @@ export class AuthService {
     });
 
     if (!user) {
-      throw new Error("Invalid email or password");
+      throw new AuthError("Invalid email or password", 401, "INVALID_CREDENTIALS");
     }
 
     // Verify password
     const isValidPassword = await argon2.verify(user.password, password);
 
     if (!isValidPassword) {
-      throw new Error("Invalid email or password");
+      throw new AuthError("Invalid email or password", 401, "INVALID_CREDENTIALS");
     }
 
     // Generate JWT token
@@ -110,7 +94,9 @@ export class AuthService {
         id: user.id,
         email: user.email,
         name: user.name,
+        mobile: user.mobile,
         role: user.role,
+        createdAt: user.createdAt,
       },
       token,
     };
@@ -120,9 +106,13 @@ export class AuthService {
    * Logout user by invalidating session
    */
   static async logout(token: string, prisma: PrismaClient): Promise<void> {
-    await prisma.session.deleteMany({
+    const deletedSessions = await prisma.session.deleteMany({
       where: { token },
     });
+
+    if (deletedSessions.count === 0) {
+      throw new AuthError("Invalid or expired token", 401, "INVALID_TOKEN");
+    }
   }
 
   /**
@@ -150,9 +140,32 @@ export class AuthService {
       }
 
       return session.user;
-    } catch {
+    } catch (error) {
       return null;
     }
+  }
+
+  /**
+   * Get current user profile
+   */
+  static async getCurrentUser(userId: string, prisma: PrismaClient): Promise<UserResponse> {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        mobile: true,
+        role: true,
+        createdAt: true,
+      },
+    });
+
+    if (!user) {
+      throw new AuthError("User not found", 404, "USER_NOT_FOUND");
+    }
+
+    return user;
   }
 
   /**

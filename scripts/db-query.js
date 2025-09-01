@@ -14,6 +14,7 @@ async function main() {
           id: true,
           email: true,
           name: true,
+          mobile: true,
           role: true,
           createdAt: true,
         },

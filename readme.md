@@ -78,220 +78,12 @@ Once the server is running, you can access the API documentation at:
 - Swagger UI: `http://localhost:3000/docs`
 - OpenAPI JSON: `http://localhost:3000/docs/json`
 
-## Authentication APIs
+### Available APIs
+- **Authentication:** Register, login, logout, and user profile management
+- **Database Management:** Visual browser and quick query scripts
+- **Health Check:** Server status endpoint
 
-### 1. Register User
-**Endpoint:** `POST /auth/register`
-
-**Request:**
-```bash
-curl -X POST http://localhost:3000/auth/register \
-  -H "Content-Type: application/json" \
-  -d '{
-    "email": "user@example.com",
-    "password": "password123",
-    "name": "John Doe"
-  }'
-```
-
-**Request Body:**
-```json
-{
-  "email": "user@example.com",
-  "password": "password123",
-  "name": "John Doe"
-}
-```
-
-**Success Response (201):**
-```json
-{
-  "success": true,
-  "data": {
-    "user": {
-      "id": "cmevqpx3r0003tmujv9g9w5o8",
-      "email": "user@example.com",
-      "name": "John Doe",
-      "role": "USER"
-    },
-    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
-  }
-}
-```
-
-**Error Response (400):**
-```json
-{
-  "success": false,
-  "error": "User with this email already exists"
-}
-```
-
-### 2. Login User
-**Endpoint:** `POST /auth/login`
-
-**Request:**
-```bash
-curl -X POST http://localhost:3000/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{
-    "email": "user@example.com",
-    "password": "password123"
-  }'
-```
-
-**Request Body:**
-```json
-{
-  "email": "user@example.com",
-  "password": "password123"
-}
-```
-
-**Success Response (200):**
-```json
-{
-  "success": true,
-  "data": {
-    "user": {
-      "id": "cmevqpx3r0003tmujv9g9w5o8",
-      "email": "user@example.com",
-      "name": "John Doe",
-      "role": "USER"
-    },
-    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
-  }
-}
-```
-
-**Error Response (401):**
-```json
-{
-  "success": false,
-  "error": "Invalid email or password"
-}
-```
-
-### 3. Get Current User Profile
-**Endpoint:** `GET /auth/me`
-
-**Request:**
-```bash
-curl -X GET http://localhost:3000/auth/me \
-  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
-```
-
-**Success Response (200):**
-```json
-{
-  "success": true,
-  "data": {
-    "id": "cmevqpx3r0003tmujv9g9w5o8",
-    "email": "user@example.com",
-    "name": "John Doe",
-    "role": "USER",
-    "createdAt": "2025-08-28T18:31:33.591Z"
-  }
-}
-```
-
-**Error Response (401):**
-```json
-{
-  "success": false,
-  "error": "Unauthorized"
-}
-```
-
-### 4. Logout User
-**Endpoint:** `POST /auth/logout`
-
-**Request:**
-```bash
-curl -X POST http://localhost:3000/auth/logout \
-  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
-```
-
-**Success Response (200):**
-```json
-{
-  "success": true,
-  "message": "Logged out successfully"
-}
-```
-
-**Error Response (401):**
-```json
-{
-  "success": false,
-  "error": "Authorization header required"
-}
-```
-
-## Database Management
-
-### Prisma Studio (Visual Database Browser)
-**Start Prisma Studio:**
-```bash
-npm run studio
-```
-- **URL:** http://localhost:5555
-- **Features:** Visual interface to browse and edit database records
-- **Benefits:** Fast, real-time updates, no SQL required
-
-### Quick Database Scripts
-
-#### View All Users
-```bash
-npm run db:users
-```
-**Output:**
-```
-┌─────────┬─────────────────────────────┬────────────────────┬─────────────────┬────────┬──────────────────────────┐
-│ (index) │ id                          │ email              │ name            │ role   │ createdAt                │
-├─────────┼─────────────────────────────┼────────────────────┼─────────────────┼────────┼──────────────────────────┤
-│ 0       │ 'cmevqpx3r0003tmujv9g9w5o8' │ 'test@example.com' │ 'Test User'     │ 'USER' │ 2025-08-28T18:31:33.591Z │
-│ 1       │ 'cmevp7gol0000tmujre43ivy9' │ 'user@example.com' │ 'John Doe'      │ 'USER' │ 2025-08-28T17:49:12.885Z │
-└─────────┴─────────────────────────────┴────────────────────┴─────────────────┴────────┴──────────────────────────┘
-```
-
-#### View All Sessions
-```bash
-npm run db:sessions
-```
-**Output:**
-```
-┌─────────┬─────────────────────────────┬────────────────────┬─────────────────┬──────────────────────────┬──────────────────────────┐
-│ (index) │ id                          │ userEmail          │ userName        │ expiresAt               │ createdAt                │
-├─────────┼─────────────────────────────┼────────────────────┼─────────────────┼──────────────────────────┼──────────────────────────┤
-│ 0       │ 'cmevqpx3r0003tmujv9g9w5o8' │ 'test@example.com' │ 'Test User'     │ 2025-09-04T18:31:33.591Z │ 2025-08-28T18:31:33.591Z │
-└─────────┴─────────────────────────────┴────────────────────┴─────────────────┴──────────────────────────┴──────────────────────────┘
-```
-
-#### Database Statistics
-```bash
-npm run db:count
-```
-**Output:**
-```
-📊 Database Stats:
-👥 Users: 5
-🔑 Sessions: 6
-📈 Activities: 0
-```
-
-### Manual Database Scripts
-You can also run the scripts directly:
-```bash
-# View users
-node scripts/db-query.js users
-
-# View sessions
-node scripts/db-query.js sessions
-
-# Show statistics
-node scripts/db-query.js count
-```
+📖 **For detailed API documentation, see:** `docs/API_DOCUMENTATION.md`
 
 ## Security Features
 
@@ -361,36 +153,14 @@ src/
 4. Add tests if applicable
 5. Submit a pull request
 
-## Testing the APIs
-
-### Quick Test Commands
-
-You can test all the APIs using these curl commands:
-
-```bash
-# 1. Register a new user
-curl -X POST http://localhost:3000/auth/register \
-  -H "Content-Type: application/json" \
-  -d '{"email":"test@example.com","password":"password123","name":"Test User"}'
-
-# 2. Login with the user
-curl -X POST http://localhost:3000/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{"email":"test@example.com","password":"password123"}'
-
-# 3. Get user profile (replace TOKEN with the token from login response)
-curl -X GET http://localhost:3000/auth/me \
-  -H "Authorization: Bearer TOKEN"
-
-# 4. Logout (replace TOKEN with the token from login response)
-curl -X POST http://localhost:3000/auth/logout \
-  -H "Authorization: Bearer TOKEN"
-```
+## Quick Start
 
 ### Health Check
 ```bash
 curl http://localhost:3000/health
 ```
+
+📖 **For detailed testing instructions, see:** `docs/API_DOCUMENTATION.md`
 
 ## Troubleshooting
 
@@ -430,6 +200,8 @@ lsof -ti:5555 | xargs kill -9
 - Make sure `JWT_SECRET` is set in your `.env` file
 - Tokens expire after 7 days
 - Use the token from login/register response in Authorization header
+
+📖 **For detailed troubleshooting, see:** `docs/API_DOCUMENTATION.md`
 
 ## License
 

@@ -12,9 +12,12 @@ model User {
   email      String     @unique
   password   String
   name       String?
+  mobile     String?    // Phone number with country code (e.g., +1234567890)
   role       Role       @default(USER)
   createdAt  DateTime   @default(now())
-  updatedAt  DateTime   @updatedAt
+  updatedAt  DateTime   @updatedAt  // Automatically updated when record is modified
+
+  // Relations
   activities Activity[]
   sessions   Session[]
 
