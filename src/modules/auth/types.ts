@@ -9,7 +9,6 @@ export interface UserResponse {
   id: string;
   email: string;
   name: string | null;
-  mobile: string | null;
   role: string;
   createdAt: Date;
 }
@@ -20,11 +19,6 @@ export interface AuthResponse {
 }
 
 // Error types
-export interface AuthError {
-  statusCode: number;
-  message: string;
-  code?: string;
-}
 
 export class AuthError extends Error {
   constructor(

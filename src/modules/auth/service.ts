@@ -19,7 +19,7 @@ export async function register(
   input: RegisterInput,
   prisma: PrismaClient
 ): Promise<AuthResponse> {
-  const { email, password, name, mobile } = input;
+  const { email, password, name } = input;
 
   // Check if user already exists
   const existingUser = await prisma.user.findUnique({
@@ -43,7 +43,6 @@ export async function register(
       email,
       password: hashedPassword,
       name,
-      mobile,
     },
   });
 
@@ -54,22 +53,14 @@ export async function register(
   await createSession(user.id, token, prisma);
 
   // Destructure user object for response
-  const {
-    id,
-    email: userEmail,
-    name: userName,
-    mobile: userMobile,
-    role: userRole,
-    createdAt,
-  } = user;
+  const { id, role, createdAt } = user;
 
   return {
     user: {
       id,
-      email: userEmail,
-      name: userName,
-      mobile: userMobile,
-      role: userRole,
+      email,
+      name,
+      role,
       createdAt,
     },
     token,
@@ -120,7 +111,6 @@ export async function login(
     id,
     email: userEmail,
     name: userName,
-    mobile: userMobile,
     role: userRole,
     createdAt,
   } = user;
@@ -130,7 +120,6 @@ export async function login(
       id,
       email: userEmail,
       name: userName,
-      mobile: userMobile,
       role: userRole,
       createdAt,
     },
