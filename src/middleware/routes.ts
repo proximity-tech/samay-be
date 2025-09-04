@@ -1,6 +1,7 @@
 export const publicRoutes = [
   "/auth/login",
   "/auth/register",
+  "/auth/logout",
   "/docs",
   "/docs/static/swagger-ui-standalone-preset.js",
   "/docs/static/index.css",

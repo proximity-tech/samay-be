@@ -8,7 +8,11 @@
     "build": "tsc",
     "start": "node dist/src/index.js",
     "generate": "npx prisma generate",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "db:users": "node scripts/db-query.js users",
+    "db:sessions": "node scripts/db-query.js sessions",
+    "db:count": "node scripts/db-query.js count",
+    "studio": "npx prisma studio"
   },
   "prisma": {
     "seed": "ts-node prisma/seed.ts"
