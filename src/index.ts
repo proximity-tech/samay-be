@@ -9,8 +9,7 @@ import {
 } from "fastify-type-provider-zod";
 import prismaPlugin from "./plugins/prisma-plugin";
 import authMiddleware from "./middleware/auth-middleware";
-import authRoutes from "./routes/auth-routes";
-
+import authRoutes from "./modules/auth/routes";
 const app = Fastify({
   logger: true,
 });
@@ -66,8 +65,6 @@ app.get("/", async function handler() {
 app.get("/health", async function handler() {
   return { message: "App is Strong and healthy 🚀" };
 });
-
-
 
 app.listen({ port: parseInt(process.env.PORT || "3000") }, (err) => {
   if (err) {
