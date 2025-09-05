@@ -1,6 +1,5 @@
 import { Activity, PrismaClient } from "@prisma/client";
 import {
-  ActivityError,
   ActivityResponse,
   CreateActivityInput,
   UpdateActivityInput,
@@ -60,20 +59,8 @@ export async function updateActivity(
   userId: string,
   prisma: PrismaClient
 ): Promise<ActivityResponse> {
-  // Check if activity exists and belongs to user
-  const existingActivity = await prisma.activity.findFirst({
-    where: {
-      id,
-      userId,
-    },
-  });
-
-  if (!existingActivity) {
-    throw new ActivityError("Activity not found", 404, "ACTIVITY_NOT_FOUND");
-  }
-
   const activity = await prisma.activity.update({
-    where: { id },
+    where: { id, userId },
     data: input,
   });
 
@@ -88,20 +75,8 @@ export async function deleteActivity(
   userId: string,
   prisma: PrismaClient
 ): Promise<void> {
-  // Check if activity exists and belongs to user
-  const existingActivity = await prisma.activity.findFirst({
-    where: {
-      id,
-      userId,
-    },
-  });
-
-  if (!existingActivity) {
-    throw new ActivityError("Activity not found", 404, "ACTIVITY_NOT_FOUND");
-  }
-
   await prisma.activity.delete({
-    where: { id },
+    where: { id, userId },
   });
 }
 

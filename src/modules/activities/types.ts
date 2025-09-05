@@ -17,15 +17,3 @@ export interface ActivityResponse {
   createdAt: Date;
   updatedAt: Date;
 }
-
-// Error types
-export class ActivityError extends Error {
-  constructor(
-    message: string,
-    public statusCode: number = 400,
-    public code?: string
-  ) {
-    super(message);
-    this.name = "ActivityError";
-  }
-}

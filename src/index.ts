@@ -8,7 +8,7 @@ import {
   validatorCompiler,
 } from "fastify-type-provider-zod";
 import prismaPlugin from "./plugins/prisma-plugin";
-import authMiddleware from "./middleware/auth-middleware";
+import authMiddleware from "./middleware/auth";
 import authRoutes from "./modules/auth/routes";
 import activityRoutes from "./modules/activities/routes";
 const app = Fastify({
