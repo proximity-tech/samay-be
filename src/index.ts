@@ -10,6 +10,7 @@ import {
 import prismaPlugin from "./plugins/prisma-plugin";
 import authMiddleware from "./middleware/auth-middleware";
 import authRoutes from "./modules/auth/routes";
+import activityRoutes from "./modules/activities/routes";
 const app = Fastify({
   logger: true,
 });
@@ -57,6 +58,7 @@ app.register(authMiddleware);
 
 // Register routes
 app.register(authRoutes, { prefix: "/auth" });
+app.register(activityRoutes, { prefix: "/activities" });
 
 app.get("/", async function handler() {
   return "Tick Tick Track your activity without fuss";
