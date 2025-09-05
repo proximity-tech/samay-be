@@ -1,8 +1,8 @@
 import fp from "fastify-plugin";
 import { FastifyPluginAsync } from "fastify";
 import { publicRoutes, adminRoutes } from "./routes";
+import { validateToken } from "../../modules/auth/service";
 import { JWTPayload } from "./types";
-import { validateToken } from "../modules/auth/service";
 
 declare module "fastify" {
   interface FastifyRequest {

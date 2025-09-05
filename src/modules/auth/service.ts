@@ -1,13 +1,8 @@
 import { PrismaClient, User } from "@prisma/client";
 import * as argon2 from "argon2";
 import jwt from "jsonwebtoken";
-import {
-  AuthError,
-  AuthResponse,
-  LoginInput,
-  RegisterInput,
-  UserResponse,
-} from "./types";
+import { AuthResponse, LoginInput, RegisterInput, UserResponse } from "./types";
+import { AppError } from "../../plugins/error/plugin";
 
 const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key";
 const JWT_EXPIRES_IN = "7d";
@@ -27,7 +22,7 @@ export async function register(
   });
 
   if (existingUser) {
-    throw new AuthError(
+    throw new AppError(
       "User with this email already exists",
       409,
       "USER_EXISTS"
@@ -82,22 +77,14 @@ export async function login(
   });
 
   if (!user) {
-    throw new AuthError(
-      "Invalid email or password",
-      401,
-      "INVALID_CREDENTIALS"
-    );
+    throw new AppError("Invalid email or password", 401, "INVALID_CREDENTIALS");
   }
 
   // Verify password
   const isValidPassword = await argon2.verify(user.password, password);
 
   if (!isValidPassword) {
-    throw new AuthError(
-      "Invalid email or password",
-      401,
-      "INVALID_CREDENTIALS"
-    );
+    throw new AppError("Invalid email or password", 401, "INVALID_CREDENTIALS");
   }
 
   // Generate JWT token
@@ -139,7 +126,7 @@ export async function logout(
   });
 
   if (deletedSessions.count === 0) {
-    throw new AuthError("Invalid or expired token", 401, "INVALID_TOKEN");
+    throw new AppError("Invalid or expired token", 401, "INVALID_TOKEN");
   }
 }
 
@@ -195,7 +182,7 @@ export async function getCurrentUser(
   });
 
   if (!user) {
-    throw new AuthError("User not found", 404, "USER_NOT_FOUND");
+    throw new AppError("User not found", 404, "USER_NOT_FOUND");
   }
 
   return user;

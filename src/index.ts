@@ -8,7 +8,8 @@ import {
   validatorCompiler,
 } from "fastify-type-provider-zod";
 import prismaPlugin from "./plugins/prisma-plugin";
-import authMiddleware from "./middleware/auth";
+import errorHandlerPlugin from "./plugins/error/plugin";
+import authMiddleware from "./plugins/auth/auth";
 import authRoutes from "./modules/auth/routes";
 import activityRoutes from "./modules/activities/routes";
 const app = Fastify({
@@ -22,6 +23,7 @@ app.register(cors, {
 });
 
 app.register(prismaPlugin);
+app.register(errorHandlerPlugin);
 
 app.setValidatorCompiler(validatorCompiler);
 app.setSerializerCompiler(serializerCompiler);

@@ -1,7 +1,6 @@
 import { FastifyPluginAsync } from "fastify";
 import { LOGIN_SCHEMA, REGISTER_SCHEMA } from "./schema";
 import { register, login, logout, getCurrentUser } from "./service";
-import { AuthError } from "./types";
 import { ZodTypeProvider } from "fastify-type-provider-zod";
 
 const authRoutes: FastifyPluginAsync = async (fastify) => {
@@ -44,22 +43,13 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
     method: "POST",
     url: "/logout",
     handler: async (request, reply) => {
-      try {
-        const authHeader = request.headers.authorization || "";
-        const token = authHeader.split(" ")[1];
-        await logout(token, prisma);
+      const authHeader = request.headers.authorization || "";
+      const token = authHeader.split(" ")[1];
+      await logout(token, prisma);
 
-        return reply.send({
-          message: "Logged out successfully",
-        });
-      } catch (error) {
-        if (error instanceof AuthError) {
-          return reply.status(error.statusCode).send({
-            error: error.message,
-            code: error.code,
-          });
-        }
-      }
+      return reply.send({
+        message: "Logged out successfully",
+      });
     },
   });
 
@@ -67,20 +57,11 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
     method: "GET",
     url: "/me",
     handler: async (request, reply) => {
-      try {
-        const { userId = "" } = request.user || {};
-        const user = await getCurrentUser(userId, prisma);
-        return reply.send({
-          data: user,
-        });
-      } catch (error) {
-        if (error instanceof AuthError) {
-          return reply.status(error.statusCode).send({
-            error: error.message,
-            code: error.code,
-          });
-        }
-      }
+      const { userId = "" } = request.user || {};
+      const user = await getCurrentUser(userId, prisma);
+      return reply.send({
+        data: user,
+      });
     },
   });
 };
