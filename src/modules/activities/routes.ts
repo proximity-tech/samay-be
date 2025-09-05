@@ -13,7 +13,6 @@ import {
   deleteActivity,
   getActivityStats,
 } from "./service";
-import { ActivityError } from "./types";
 
 const activityRoutes: FastifyPluginAsync = async (fastify) => {
   const prisma = fastify.prisma;
@@ -26,23 +25,13 @@ const activityRoutes: FastifyPluginAsync = async (fastify) => {
       body: CREATE_ACTIVITY_SCHEMA,
     },
     handler: async (request, reply) => {
-      try {
-        const { userId = "" } = request.user || {};
-        const input = request.body;
-        const result = await createActivity(input, userId, prisma);
+      const { userId = "" } = request.user || {};
+      const input = request.body;
+      const result = await createActivity(input, userId, prisma);
 
-        return reply.status(201).send({
-          data: result,
-        });
-      } catch (error) {
-        if (error instanceof ActivityError) {
-          return reply.status(error.statusCode).send({
-            error: error.message,
-            code: error.code,
-          });
-        }
-        throw error;
-      }
+      return reply.status(201).send({
+        data: result,
+      });
     },
   });
 
@@ -54,23 +43,13 @@ const activityRoutes: FastifyPluginAsync = async (fastify) => {
       querystring: ACTIVITIES_QUERY_SCHEMA,
     },
     handler: async (request, reply) => {
-      try {
-        const { userId = "" } = request.user || {};
-        const query = request.query;
-        const result = await getActivities(userId, query, prisma);
+      const { userId = "" } = request.user || {};
+      const query = request.query;
+      const result = await getActivities(userId, query, prisma);
 
-        return reply.send({
-          data: result,
-        });
-      } catch (error) {
-        if (error instanceof ActivityError) {
-          return reply.status(error.statusCode).send({
-            error: error.message,
-            code: error.code,
-          });
-        }
-        throw error;
-      }
+      return reply.send({
+        data: result,
+      });
     },
   });
 
@@ -79,22 +58,12 @@ const activityRoutes: FastifyPluginAsync = async (fastify) => {
     method: "GET",
     url: "/stats",
     handler: async (request, reply) => {
-      try {
-        const { userId = "" } = request.user || {};
-        const result = await getActivityStats(userId, prisma);
+      const { userId = "" } = request.user || {};
+      const result = await getActivityStats(userId, prisma);
 
-        return reply.send({
-          data: result,
-        });
-      } catch (error) {
-        if (error instanceof ActivityError) {
-          return reply.status(error.statusCode).send({
-            error: error.message,
-            code: error.code,
-          });
-        }
-        throw error;
-      }
+      return reply.send({
+        data: result,
+      });
     },
   });
 
@@ -107,24 +76,14 @@ const activityRoutes: FastifyPluginAsync = async (fastify) => {
       body: UPDATE_ACTIVITY_SCHEMA,
     },
     handler: async (request, reply) => {
-      try {
-        const { userId = "" } = request.user || {};
-        const { id } = request.params;
-        const input = request.body;
-        const result = await updateActivity(id, input, userId, prisma);
+      const { userId = "" } = request.user || {};
+      const { id } = request.params;
+      const input = request.body;
+      const result = await updateActivity(id, input, userId, prisma);
 
-        return reply.send({
-          data: result,
-        });
-      } catch (error) {
-        if (error instanceof ActivityError) {
-          return reply.status(error.statusCode).send({
-            error: error.message,
-            code: error.code,
-          });
-        }
-        throw error;
-      }
+      return reply.send({
+        data: result,
+      });
     },
   });
 
@@ -136,23 +95,13 @@ const activityRoutes: FastifyPluginAsync = async (fastify) => {
       params: ACTIVITY_ID_PARAM_SCHEMA,
     },
     handler: async (request, reply) => {
-      try {
-        const { userId = "" } = request.user || {};
-        const { id } = request.params;
-        await deleteActivity(id, userId, prisma);
+      const { userId = "" } = request.user || {};
+      const { id } = request.params;
+      await deleteActivity(id, userId, prisma);
 
-        return reply.send({
-          message: "Activity deleted successfully",
-        });
-      } catch (error) {
-        if (error instanceof ActivityError) {
-          return reply.status(error.statusCode).send({
-            error: error.message,
-            code: error.code,
-          });
-        }
-        throw error;
-      }
+      return reply.send({
+        message: "Activity deleted successfully",
+      });
     },
   });
 };
