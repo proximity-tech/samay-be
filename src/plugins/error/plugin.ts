@@ -50,16 +50,13 @@ export class ConflictError extends AppError {
 
 // Error response interface
 interface ErrorResponse {
-  success: false;
-  error: {
-    message: string;
-    code?: string;
-    statusCode: number;
-    timestamp: string;
-    path?: string;
-    method?: string;
-    details?: unknown;
-  };
+  message: string;
+  code?: string;
+  statusCode: number;
+  timestamp: string;
+  path?: string;
+  method?: string;
+  details?: unknown;
 }
 
 // Prisma error mapping
@@ -152,15 +149,12 @@ const formatError = (
   // Handle custom AppError
   if (error instanceof AppError) {
     return {
-      success: false,
-      error: {
-        message: error.message,
-        code: error.code,
-        statusCode: error.statusCode,
-        timestamp,
-        path: request?.url,
-        method: request?.method,
-      },
+      message: error.message,
+      code: error.code,
+      statusCode: error.statusCode,
+      timestamp,
+      path: request?.url,
+      method: request?.method,
     };
   }
 
@@ -168,34 +162,27 @@ const formatError = (
   if (error instanceof Prisma.PrismaClientKnownRequestError) {
     const mappedError = mapPrismaError(error);
     return {
-      success: false,
-      error: {
-        message: mappedError.message,
-        code: mappedError.code,
-        statusCode: mappedError.statusCode,
-        timestamp,
-        path: request?.url,
-        method: request?.method,
-        details:
-          process.env.NODE_ENV === "development" ? error.meta : undefined,
-      },
+      message: mappedError.message,
+      code: mappedError.code,
+      statusCode: mappedError.statusCode,
+      timestamp,
+      path: request?.url,
+      method: request?.method,
+      details: process.env.NODE_ENV === "development" ? error.meta : undefined,
     };
   }
 
   // Handle Prisma validation errors
   if (error instanceof Prisma.PrismaClientValidationError) {
     return {
-      success: false,
-      error: {
-        message: "Invalid data provided",
-        code: "VALIDATION_ERROR",
-        statusCode: 400,
-        timestamp,
-        path: request?.url,
-        method: request?.method,
-        details:
-          process.env.NODE_ENV === "development" ? error.message : undefined,
-      },
+      message: "Invalid data provided",
+      code: "VALIDATION_ERROR",
+      statusCode: 400,
+      timestamp,
+      path: request?.url,
+      method: request?.method,
+      details:
+        process.env.NODE_ENV === "development" ? error.message : undefined,
     };
   }
 
@@ -203,15 +190,12 @@ const formatError = (
   if (error.name === "ZodError") {
     const mappedError = mapZodError(error as unknown as ZodError);
     return {
-      success: false,
-      error: {
-        message: mappedError.message,
-        code: mappedError.code,
-        statusCode: mappedError.statusCode,
-        timestamp,
-        path: request?.url,
-        method: request?.method,
-      },
+      message: mappedError.message,
+      code: mappedError.code,
+      statusCode: mappedError.statusCode,
+      timestamp,
+      path: request?.url,
+      method: request?.method,
     };
   }
 
@@ -219,44 +203,35 @@ const formatError = (
   if ("validation" in error && error.validation) {
     const mappedError = mapFastifyValidationError(error as FastifyError);
     return {
-      success: false,
-      error: {
-        message: mappedError.message,
-        code: mappedError.code,
-        statusCode: mappedError.statusCode,
-        timestamp,
-        path: request?.url,
-        method: request?.method,
-      },
+      message: mappedError.message,
+      code: mappedError.code,
+      statusCode: mappedError.statusCode,
+      timestamp,
+      path: request?.url,
+      method: request?.method,
     };
   }
 
   // Handle JWT errors
   if (error.name === "JsonWebTokenError") {
     return {
-      success: false,
-      error: {
-        message: "Invalid token",
-        code: "INVALID_TOKEN",
-        statusCode: 401,
-        timestamp,
-        path: request?.url,
-        method: request?.method,
-      },
+      message: "Invalid token",
+      code: "INVALID_TOKEN",
+      statusCode: 401,
+      timestamp,
+      path: request?.url,
+      method: request?.method,
     };
   }
 
   if (error.name === "TokenExpiredError") {
     return {
-      success: false,
-      error: {
-        message: "Token has expired",
-        code: "TOKEN_EXPIRED",
-        statusCode: 401,
-        timestamp,
-        path: request?.url,
-        method: request?.method,
-      },
+      message: "Token has expired",
+      code: "TOKEN_EXPIRED",
+      statusCode: 401,
+      timestamp,
+      path: request?.url,
+      method: request?.method,
     };
   }
 
@@ -265,16 +240,13 @@ const formatError = (
   const isOperational = error instanceof AppError ? error.isOperational : false;
 
   return {
-    success: false,
-    error: {
-      message: isOperational ? error.message : "Internal server error",
-      code: "INTERNAL_ERROR",
-      statusCode,
-      timestamp,
-      path: request?.url,
-      method: request?.method,
-      details: process.env.NODE_ENV === "development" ? error.stack : undefined,
-    },
+    message: isOperational ? error.message : "Internal server error",
+    code: "INTERNAL_ERROR",
+    statusCode,
+    timestamp,
+    path: request?.url,
+    method: request?.method,
+    details: process.env.NODE_ENV === "development" ? error.stack : undefined,
   };
 };
 
@@ -330,11 +302,11 @@ const errorHandlerPlugin: FastifyPluginAsync = async (fastify) => {
 
     // Log the error
     logError(error, request, formattedError);
-    const { statusCode, message } = formattedError.error;
+    const { statusCode, message, code } = formattedError;
     // Send the formatted error response
     await reply
       .status(statusCode)
-      .send({ success: false, error: { message, statusCode } });
+      .send({ success: false, error: { message, statusCode, code } });
   });
 
   // Set not found handler
@@ -345,9 +317,11 @@ const errorHandlerPlugin: FastifyPluginAsync = async (fastify) => {
     const formattedError = formatError(error, request);
 
     logError(error, request, formattedError);
-    const { message } = formattedError.error;
+    const { message, code, statusCode } = formattedError;
 
-    await reply.status(404).send({ message });
+    await reply
+      .status(statusCode)
+      .send({ success: false, error: { message, code, statusCode } });
   });
 
   // Add error classes to fastify instance for use in routes
