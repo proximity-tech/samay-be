@@ -304,9 +304,7 @@ const errorHandlerPlugin: FastifyPluginAsync = async (fastify) => {
     logError(error, request, formattedError);
     const { statusCode, message, code } = formattedError;
     // Send the formatted error response
-    await reply
-      .status(statusCode)
-      .send({ success: false, error: { message, statusCode, code } });
+    await reply.status(statusCode).send({ message, statusCode, code });
   });
 
   // Set not found handler
@@ -319,9 +317,7 @@ const errorHandlerPlugin: FastifyPluginAsync = async (fastify) => {
     logError(error, request, formattedError);
     const { message, code, statusCode } = formattedError;
 
-    await reply
-      .status(statusCode)
-      .send({ success: false, error: { message, code, statusCode } });
+    await reply.status(statusCode).send({ message, code, statusCode });
   });
 
   // Add error classes to fastify instance for use in routes
