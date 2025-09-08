@@ -102,7 +102,7 @@ export async function getActivityStats(
 ): Promise<{
   totalActivities: number;
   totalDuration: number;
-  topApps: Array<{ app: string; count: number }>;
+  topApps: Array<{ app: string; duration: number }>;
   recentActivity: ActivityResponse | null;
 }> {
   const [totalActivities, totalDuration, topApps, recentActivity] =
@@ -115,8 +115,8 @@ export async function getActivityStats(
       prisma.activity.groupBy({
         by: ["app"],
         where: { userId },
-        _count: { app: true },
-        orderBy: { _count: { app: "desc" } },
+        _sum: { duration: true },
+        orderBy: { _sum: { duration: "desc" } },
         take: 5,
       }),
       prisma.activity.findFirst({
@@ -130,8 +130,65 @@ export async function getActivityStats(
     totalDuration: totalDuration._sum.duration || 0,
     topApps: topApps.map((item) => ({
       app: item.app,
-      count: item._count.app,
+      duration: item._sum.duration || 0,
     })),
     recentActivity,
+  };
+}
+
+/**
+ * Get activity statistics for a specific day
+ */
+export async function getActivityStatsByDay(
+  userId: string,
+  date: string,
+  prisma: PrismaClient
+): Promise<{
+  date: string;
+  totalDuration: number;
+  totalActivities: number;
+  topApps: Array<{ app: string; duration: number }>;
+}> {
+  // Create date range for the specific day
+  const dayStart = new Date(date);
+  dayStart.setHours(0, 0, 0, 0);
+  const dayEnd = new Date(date);
+  dayEnd.setHours(23, 59, 59, 999);
+
+  // Get aggregated data for the day
+  const [dayStats, topApps] = await Promise.all([
+    prisma.activity.aggregate({
+      where: {
+        userId,
+        createdAt: {
+          gte: dayStart,
+          lte: dayEnd,
+        },
+      },
+      _sum: { duration: true },
+      _count: { id: true },
+    }),
+    prisma.activity.groupBy({
+      by: ["app"],
+      where: {
+        userId,
+        createdAt: {
+          gte: dayStart,
+          lte: dayEnd,
+        },
+      },
+      _sum: { duration: true },
+      orderBy: { _sum: { duration: "desc" } },
+    }),
+  ]);
+
+  return {
+    date: date,
+    totalDuration: dayStats._sum.duration || 0,
+    totalActivities: dayStats._count.id,
+    topApps: topApps.map((item) => ({
+      app: item.app,
+      duration: item._sum.duration || 0,
+    })),
   };
 }

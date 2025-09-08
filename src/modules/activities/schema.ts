@@ -27,3 +27,7 @@ export const ACTIVITIES_QUERY_SCHEMA = z.object({
   startDate: z.string().optional(),
   endDate: z.string().optional(),
 });
+
+export const STATS_BY_DAY_QUERY_SCHEMA = z.object({
+  date: z.string().min(1, "Date is required"),
+});
