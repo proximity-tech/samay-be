@@ -144,9 +144,7 @@ export async function getActivityStatsByDay(
   date: string,
   prisma: PrismaClient
 ): Promise<{
-  date: string;
   totalDuration: number;
-  totalActivities: number;
   topApps: Array<{ app: string; duration: number }>;
 }> {
   // Create date range for the specific day
@@ -183,9 +181,7 @@ export async function getActivityStatsByDay(
   ]);
 
   return {
-    date: date,
     totalDuration: dayStats._sum.duration || 0,
-    totalActivities: dayStats._count.id,
     topApps: topApps.map((item) => ({
       app: item.app,
       duration: item._sum.duration || 0,
