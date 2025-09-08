@@ -1,21 +1,22 @@
 import { z } from "zod";
 
-export const CREATE_ACTIVITY_SCHEMA = z.object({
+export const EVENT_DATA_SCHEMA = z.object({
   app: z.string().min(1, "App name is required"),
-  url: z.url("Invalid URL format"),
-  title: z.string().min(1, "Title is required"),
-  description: z.string().optional(),
+  url: z.string("URL is required").default(""),
+  title: z.string().default(""),
+});
+
+export const CREATE_ACTIVITY_SCHEMA = z.object({
+  data: EVENT_DATA_SCHEMA,
   timestamp: z.string().min(1, "Timestamp is required"),
-  duration: z.number().int().positive().optional(),
+  duration: z.number().default(0),
 });
 
 export const UPDATE_ACTIVITY_SCHEMA = z.object({
-  app: z.string().min(1, "App name is required").optional(),
-  url: z.url("Invalid URL format").optional(),
-  title: z.string().min(1, "Title is required").optional(),
-  description: z.string().optional(),
+  data: EVENT_DATA_SCHEMA.optional(),
   timestamp: z.string().min(1, "Timestamp is required").optional(),
-  duration: z.number().int().positive().optional(),
+  duration: z.number().default(0),
+  description: z.string().optional(),
 });
 
 export const ACTIVITY_ID_PARAM_SCHEMA = z.object({

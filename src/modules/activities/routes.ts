@@ -13,6 +13,7 @@ import {
   deleteActivity,
   getActivityStats,
 } from "./service";
+import z from "zod";
 
 const activityRoutes: FastifyPluginAsync = async (fastify) => {
   const prisma = fastify.prisma;
@@ -22,15 +23,15 @@ const activityRoutes: FastifyPluginAsync = async (fastify) => {
     method: "POST",
     url: "/",
     schema: {
-      body: CREATE_ACTIVITY_SCHEMA,
+      body: z.array(CREATE_ACTIVITY_SCHEMA),
     },
     handler: async (request, reply) => {
       const { userId = "" } = request.user || {};
       const input = request.body;
-      const result = await createActivity(input, userId, prisma);
+      await createActivity(input, userId, prisma);
 
       return reply.status(201).send({
-        data: result,
+        message: "Activities created successfully",
       });
     },
   });

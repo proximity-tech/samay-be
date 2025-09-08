@@ -9,18 +9,25 @@ import {
  * Create a new activity
  */
 export async function createActivity(
-  activities: CreateActivityInput,
+  activities: CreateActivityInput[],
   userId: string,
   prisma: PrismaClient
-): Promise<ActivityResponse> {
-  const activity = await prisma.activity.create({
-    data: {
-      ...activities,
+) {
+  const mappedActivities = activities.map((activity) => {
+    const { data, timestamp, duration } = activity;
+    return {
+      ...data,
+      timestamp,
+      duration,
       userId,
-    },
+    };
   });
 
-  return activity;
+  await prisma.activity.createMany({
+    data: mappedActivities,
+  });
+
+  return;
 }
 
 /**
@@ -59,9 +66,15 @@ export async function updateActivity(
   userId: string,
   prisma: PrismaClient
 ): Promise<ActivityResponse> {
+  const { data = {}, timestamp, duration, description } = input;
   const activity = await prisma.activity.update({
     where: { id, userId },
-    data: input,
+    data: {
+      ...data,
+      timestamp,
+      duration,
+      description,
+    },
   });
 
   return activity;

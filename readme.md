@@ -1,81 +1,26 @@
-# Samay Backend - Timely App Clone
+# Samay backend
 
-A Fastify-based backend for tracking user activity across devices, built with PostgreSQL and Prisma ORM.
-
-## Features
-
-- 🔐 **Authentication System**: Register, login, logout with JWT tokens
-- 🛡️ **Secure Password Hashing**: Using Argon2 for password security
-- 📊 **Activity Tracking**: Track user activities with timestamps
-- 🔒 **Session Management**: Secure session handling with database storage
-- 📚 **API Documentation**: Auto-generated Swagger documentation
-
-## Tech Stack
-
-- **Framework**: Fastify
-- **Database**: PostgreSQL
-- **ORM**: Prisma
-- **Authentication**: JWT + Argon2
-- **Validation**: Zod
-- **Documentation**: Swagger/OpenAPI
+This is backend repo for samay application
 
 ## Setup
 
-### Prerequisites
+1. Run `npm install` to install dependencies
+2. Create `.env` file and copy contents from `.env.example` to run application.
+3. Follow db setup section for setting up database.
+4. Run `npm run dev` for running application
 
-- Node.js (v18 or higher)
-- PostgreSQL database
-- npm or yarn
+## DB Setup
 
-### Installation
+1. Install postgres
+2. Change db username and password in .env file
 
-**Clone the repository**
-
-```bash
-git clone <repository-url>
-cd samay-be
-```
-
-**Install dependencies**
-
-```bash
-npm install
-```
-
-**Environment Setup**
-Create a `.env` file in the root directory:
-
-```env
-# Database
-DATABASE_URL="postgresql://username:password@localhost:5432/samaydb"
-
-# JWT Secret (generate a strong secret for production)
-JWT_SECRET="your-super-secret-jwt-key-change-this-in-production"
-
-# Server
-PORT=3000
-
-# Environment
-NODE_ENV=development
-```
-
-**Database Setup**
+## Migration
 
 1. Run `npx prisma migrate dev --name init` for the first time
 2. Run `npx prisma migrate dev --name added_job_title` from second time
-3. For seeding data into db `npx prisma db seed`
+3. Run `npx prisma migrate dev` to migrate schema
 
-**Start Development Server**
+## Swagger docs
 
-```bash
-npm run dev
-```
-
-The server will start on `http://localhost:3000`
-
-## API Documentation
-
-Once the server is running, you can access the API documentation at:
-
-- Swagger UI: `http://localhost:3000/docs`
-- OpenAPI JSON: `http://localhost:3000/docs/json`
+1. Swagger docs present at `/docs` endpoint
+2. Use swagger for API testing
