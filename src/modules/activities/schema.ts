@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 export const EVENT_DATA_SCHEMA = z.object({
-  app: z.string().min(1, "App name is required"),
+  app: z.string().optional().default(""),
   url: z.string("URL is required").default(""),
   title: z.string().default(""),
 });
