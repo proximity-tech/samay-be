@@ -153,38 +153,30 @@ export async function getActivityStatsByDay(
   const dayEnd = new Date(date);
   dayEnd.setHours(23, 59, 59, 999);
 
+  const apps = await prisma.activity.groupBy({
+    by: ["app"],
+    where: {
+      userId,
+      createdAt: {
+        gte: dayStart,
+        lte: dayEnd,
+      },
+    },
+    _sum: { duration: true },
+
+    orderBy: { _sum: { duration: "desc" } },
+  });
+  const totalDuration = apps.reduce(
+    (acc, item) => acc + (item._sum?.duration || 0),
+    0
+  );
   // Get aggregated data for the day
-  const [dayStats, topApps] = await Promise.all([
-    prisma.activity.aggregate({
-      where: {
-        userId,
-        createdAt: {
-          gte: dayStart,
-          lte: dayEnd,
-        },
-      },
-      _sum: { duration: true },
-      _count: { id: true },
-    }),
-    prisma.activity.groupBy({
-      by: ["app"],
-      where: {
-        userId,
-        createdAt: {
-          gte: dayStart,
-          lte: dayEnd,
-        },
-      },
-      _sum: { duration: true },
-      orderBy: { _sum: { duration: "desc" } },
-    }),
-  ]);
 
   return {
-    totalDuration: dayStats._sum.duration || 0,
-    topApps: topApps.map((item) => ({
+    totalDuration: totalDuration || 0,
+    topApps: apps.map((item) => ({
       app: item.app,
-      duration: item._sum.duration || 0,
+      duration: item._sum?.duration || 0,
     })),
   };
 }
