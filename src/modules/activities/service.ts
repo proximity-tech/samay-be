@@ -164,9 +164,9 @@ export async function getAppStatsByDay(
     by: ["app"],
     where: {
       userId,
-      createdAt: {
-        gte: dayStart,
-        lte: dayEnd,
+      timestamp: {
+        gte: dayStart.toISOString(),
+        lte: dayEnd.toISOString(),
       },
       app: { notIn: EXCLUDED_APPS },
     },
@@ -202,26 +202,14 @@ export async function getTopActivities(
 ): Promise<TopActivityResponse[]> {
   const { startDate, endDate } = query;
 
-  // Create proper date range with time boundaries
-  const dateFilter: Record<string, Date> = {};
-
-  if (startDate) {
-    const dayStart = new Date(startDate);
-    dayStart.setHours(0, 0, 0, 0);
-    dateFilter.gte = dayStart;
-  }
-
-  if (endDate) {
-    const dayEnd = new Date(endDate);
-    dayEnd.setHours(23, 59, 59, 999);
-    dateFilter.lte = dayEnd;
-  }
-
   const topActivities = await prisma.activity.groupBy({
     by: ["app", "title"],
     where: {
       userId,
-      createdAt: Object.keys(dateFilter).length > 0 ? dateFilter : undefined,
+      timestamp: {
+        gte: startDate,
+        lte: endDate,
+      },
       app: { notIn: EXCLUDED_APPS },
     },
     _sum: { duration: true },
