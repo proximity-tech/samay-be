@@ -3,7 +3,10 @@ import {
   ActivityResponse,
   CreateActivityInput,
   UpdateActivityInput,
+  TopActivityResponse,
 } from "./types";
+
+const EXCLUDED_APPS = ["loginwindow", "dock"];
 
 /**
  * Create a new activity
@@ -13,15 +16,19 @@ export async function createActivity(
   userId: string,
   prisma: PrismaClient
 ) {
-  const mappedActivities = activities.map((activity) => {
-    const { data, timestamp, duration } = activity;
-    return {
-      ...data,
-      timestamp,
-      duration,
-      userId,
-    };
-  });
+  const mappedActivities = activities
+    .map((activity) => {
+      const { data, timestamp, duration } = activity;
+      return {
+        ...data,
+        timestamp,
+        duration,
+        userId,
+      };
+    })
+    .filter((activity) => {
+      return !EXCLUDED_APPS.includes(activity.app) && activity.duration > 0;
+    });
 
   await prisma.activity.createMany({
     data: mappedActivities,
@@ -161,6 +168,7 @@ export async function getAppStatsByDay(
         gte: dayStart,
         lte: dayEnd,
       },
+      app: { notIn: EXCLUDED_APPS },
     },
     _sum: { duration: true },
 
@@ -179,4 +187,51 @@ export async function getAppStatsByDay(
       duration: item._sum?.duration || 0,
     })),
   };
+}
+
+/**
+ * Get top activities grouped by app and title
+ */
+export async function getTopActivities(
+  userId: string,
+  query: {
+    startDate?: string;
+    endDate?: string;
+  },
+  prisma: PrismaClient
+): Promise<TopActivityResponse[]> {
+  const { startDate, endDate } = query;
+
+  // Create proper date range with time boundaries
+  const dateFilter: Record<string, Date> = {};
+
+  if (startDate) {
+    const dayStart = new Date(startDate);
+    dayStart.setHours(0, 0, 0, 0);
+    dateFilter.gte = dayStart;
+  }
+
+  if (endDate) {
+    const dayEnd = new Date(endDate);
+    dayEnd.setHours(23, 59, 59, 999);
+    dateFilter.lte = dayEnd;
+  }
+
+  const topActivities = await prisma.activity.groupBy({
+    by: ["app", "title"],
+    where: {
+      userId,
+      createdAt: Object.keys(dateFilter).length > 0 ? dateFilter : undefined,
+      app: { notIn: EXCLUDED_APPS },
+    },
+    _sum: { duration: true },
+    orderBy: { _sum: { duration: "desc" } },
+    take: 20,
+  });
+
+  return topActivities.map((item) => ({
+    app: item.app,
+    title: item.title,
+    duration: item._sum?.duration || 0,
+  }));
 }

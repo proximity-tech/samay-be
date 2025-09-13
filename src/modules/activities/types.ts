@@ -17,3 +17,10 @@ export interface ActivityResponse {
   createdAt: Date;
   updatedAt: Date;
 }
+
+// Top activities response interface
+export interface TopActivityResponse {
+  app: string;
+  title: string;
+  duration: number;
+}
