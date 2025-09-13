@@ -139,7 +139,7 @@ export async function getActivityStats(
 /**
  * Get activity statistics for a specific day
  */
-export async function getActivityStatsByDay(
+export async function getAppStatsByDay(
   userId: string,
   date: string,
   prisma: PrismaClient

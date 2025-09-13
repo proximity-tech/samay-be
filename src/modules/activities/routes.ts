@@ -13,7 +13,7 @@ import {
   updateActivity,
   deleteActivity,
   getActivityStats,
-  getActivityStatsByDay,
+  getAppStatsByDay,
 } from "./service";
 import z from "zod";
 
@@ -73,14 +73,14 @@ const activityRoutes: FastifyPluginAsync = async (fastify) => {
   // Get activity statistics by day
   fastify.withTypeProvider<ZodTypeProvider>().route({
     method: "GET",
-    url: "/stats/by-day",
+    url: "/app/stats/by-day",
     schema: {
       querystring: STATS_BY_DAY_QUERY_SCHEMA,
     },
     handler: async (request, reply) => {
       const { userId = "" } = request.user || {};
       const { date } = request.query;
-      const result = await getActivityStatsByDay(userId, date, prisma);
+      const result = await getAppStatsByDay(userId, date, prisma);
 
       return reply.send({
         data: result,
