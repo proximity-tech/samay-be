@@ -5,7 +5,6 @@ import {
   UPDATE_ACTIVITY_SCHEMA,
   ACTIVITY_ID_PARAM_SCHEMA,
   ACTIVITIES_QUERY_SCHEMA,
-  STATS_BY_DAY_QUERY_SCHEMA,
   TOP_ACTIVITIES_QUERY_SCHEMA,
 } from "./schema";
 import {
@@ -14,7 +13,7 @@ import {
   updateActivity,
   deleteActivity,
   getActivityStats,
-  getAppStatsByDay,
+  getTopApps,
   getTopActivities,
 } from "./service";
 import z from "zod";
@@ -75,14 +74,14 @@ const activityRoutes: FastifyPluginAsync = async (fastify) => {
   // Get activity statistics by day
   fastify.withTypeProvider<ZodTypeProvider>().route({
     method: "GET",
-    url: "/app/stats/by-day",
+    url: "/top-apps",
     schema: {
-      querystring: STATS_BY_DAY_QUERY_SCHEMA,
+      querystring: TOP_ACTIVITIES_QUERY_SCHEMA,
     },
     handler: async (request, reply) => {
       const { userId = "" } = request.user || {};
-      const { date } = request.query;
-      const result = await getAppStatsByDay(userId, date, prisma);
+      const query = request.query;
+      const result = await getTopApps(userId, query, prisma);
 
       return reply.send({
         data: result,

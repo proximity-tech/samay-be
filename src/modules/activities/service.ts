@@ -146,27 +146,27 @@ export async function getActivityStats(
 /**
  * Get activity statistics for a specific day
  */
-export async function getAppStatsByDay(
+export async function getTopApps(
   userId: string,
-  date: string,
+  query: {
+    startDate?: string;
+    endDate?: string;
+  },
   prisma: PrismaClient
 ): Promise<{
   totalDuration: number;
   topApps: Array<{ app: string; duration: number }>;
 }> {
   // Create date range for the specific day
-  const dayStart = new Date(date);
-  dayStart.setHours(0, 0, 0, 0);
-  const dayEnd = new Date(date);
-  dayEnd.setHours(23, 59, 59, 999);
+  const { startDate, endDate } = query;
 
   const apps = await prisma.activity.groupBy({
     by: ["app"],
     where: {
       userId,
       timestamp: {
-        gte: dayStart.toISOString(),
-        lte: dayEnd.toISOString(),
+        gte: startDate,
+        lte: endDate,
       },
       app: { notIn: EXCLUDED_APPS },
     },
