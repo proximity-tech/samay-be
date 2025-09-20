@@ -19,7 +19,7 @@ model User {
   // Relations
   activities Activity[]
   sessions   Session[]
-
+  projects   Project[]
   @@map("users")
 }
 
@@ -49,6 +49,18 @@ model Activity {
   user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("activities")
+}
+// TODO: add user selected activites to project when user dragged and dropped
+model Project {
+  id Int @id @default(autoincrement())
+  name String
+  description String?
+  icon String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now())
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String
+  @@map("projects")
 }
 
 enum Role {
