@@ -1,13 +1,12 @@
 import fp from "fastify-plugin";
 import { FastifyPluginAsync } from "fastify";
-import { publicRoutes, adminRoutes } from "./routes";
+import { publicRoutes, isAdminRoute } from "./routes";
 import { validateToken } from "../../modules/auth/service";
 import { JWTPayload } from "./types";
 import { AppError, AuthorizationError } from "../error/plugin";
 
 declare module "fastify" {
   interface FastifyRequest {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     user?: JWTPayload;
   }
 }
@@ -37,10 +36,8 @@ const authMiddleware: FastifyPluginAsync = fp(async (fastify) => {
     };
 
     // Check admin routes access
-    if (payload.role === "USER") {
-      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-      //@ts-ignore
-      if (adminRoutes[method]?.[url]) {
+    if (payload.role != "ADMIN") {
+      if (isAdminRoute(method, url)) {
         throw new AuthorizationError();
       }
     }
