@@ -9,6 +9,40 @@ import {
 const EXCLUDED_APPS = ["loginwindow", "dock"];
 
 /**
+ * Sanitize string data by removing null bytes and other invalid UTF-8 characters
+ */
+function sanitizeString(str: string): string {
+  if (!str) return str;
+
+  // Remove null bytes and other control characters that can cause UTF-8 issues
+  return str
+    .split("")
+    .filter((char) => {
+      const code = char.charCodeAt(0);
+      // Keep printable characters and common whitespace (space, tab, newline, carriage return)
+      return code >= 32 || code === 9 || code === 10 || code === 13;
+    })
+    .join("")
+    .trim(); // Remove leading/trailing whitespace
+}
+
+/**
+ * Sanitize activity data to prevent database insertion errors
+ */
+function sanitizeActivityData(activity: {
+  app?: string;
+  url?: string;
+  title?: string;
+}) {
+  return {
+    ...activity,
+    app: sanitizeString(activity.app || ""),
+    url: sanitizeString(activity.url || ""),
+    title: sanitizeString(activity.title || ""),
+  };
+}
+
+/**
  * Create a new activity
  */
 export async function createActivity(
@@ -19,8 +53,9 @@ export async function createActivity(
   const mappedActivities = activities
     .map((activity) => {
       const { data, timestamp, duration } = activity;
+      const sanitizedData = sanitizeActivityData(data);
       return {
-        ...data,
+        ...sanitizedData,
         timestamp,
         duration,
         userId,
@@ -74,13 +109,14 @@ export async function updateActivity(
   prisma: PrismaClient
 ): Promise<ActivityResponse> {
   const { data = {}, timestamp, duration, description } = input;
+  const sanitizedData = data ? sanitizeActivityData(data) : {};
   const activity = await prisma.activity.update({
     where: { id, userId },
     data: {
-      ...data,
+      ...sanitizedData,
       timestamp,
       duration,
-      description,
+      description: description ? sanitizeString(description) : description,
     },
   });
 

@@ -1,9 +1,25 @@
 import { z } from "zod";
 
+// Helper function to sanitize strings in schema validation
+const sanitizeString = z.string().transform((str) => {
+  if (!str) return str;
+
+  // Remove null bytes and other control characters that can cause UTF-8 issues
+  return str
+    .split("")
+    .filter((char) => {
+      const code = char.charCodeAt(0);
+      // Keep printable characters and common whitespace (space, tab, newline, carriage return)
+      return code >= 32 || code === 9 || code === 10 || code === 13;
+    })
+    .join("")
+    .trim(); // Remove leading/trailing whitespace
+});
+
 export const EVENT_DATA_SCHEMA = z.object({
-  app: z.string().optional().default(""),
-  url: z.string("URL is required").default(""),
-  title: z.string().default(""),
+  app: sanitizeString.optional().default(""),
+  url: sanitizeString.default(""),
+  title: sanitizeString.default(""),
 });
 
 export const CREATE_ACTIVITY_SCHEMA = z.object({
@@ -16,7 +32,7 @@ export const UPDATE_ACTIVITY_SCHEMA = z.object({
   data: EVENT_DATA_SCHEMA.optional(),
   timestamp: z.string().min(1, "Timestamp is required").optional(),
   duration: z.number().default(0),
-  description: z.string().optional(),
+  description: sanitizeString.optional(),
 });
 
 export const ACTIVITY_ID_PARAM_SCHEMA = z.object({
