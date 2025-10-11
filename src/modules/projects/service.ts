@@ -1,4 +1,4 @@
-import { Project, PrismaClient } from "@prisma/client";
+import { PrismaClient } from "@prisma/client";
 import {
   ProjectResponse,
   CreateProjectInput,
@@ -9,14 +9,13 @@ import {
  * Create a new project
  */
 export async function createProject(
-  input: CreateProjectInput,
-  userId: string,
-  prisma: PrismaClient
+  prisma: PrismaClient,
+  input: CreateProjectInput
 ): Promise<ProjectResponse> {
   const project = await prisma.project.create({
     data: {
       ...input,
-      userId,
+      icon: input.icon || "",
     },
   });
 
@@ -27,67 +26,51 @@ export async function createProject(
  * Get all projects for a user with pagination and search
  */
 export async function getProjects(
+  prisma: PrismaClient,
   userId: string,
-  query: {
-    page?: string;
-    limit?: string;
-    search?: string;
-  },
-  prisma: PrismaClient
-): Promise<{
-  projects: Project[];
-  total: number;
-  page: number;
-  limit: number;
-  totalPages: number;
-}> {
-  const page = parseInt(query.page || "1");
-  const limit = parseInt(query.limit || "10");
-  const skip = (page - 1) * limit;
-
-  const whereClause = {
-    userId,
-    ...(query.search && {
-      OR: [
-        { name: { contains: query.search, mode: "insensitive" as const } },
-        {
-          description: { contains: query.search, mode: "insensitive" as const },
-        },
-      ],
-    }),
-  };
-
-  const [projects, total] = await Promise.all([
+  isAdmin: boolean
+): Promise<ProjectResponse[]> {
+  const [projects] = await Promise.all([
     prisma.project.findMany({
-      where: whereClause,
+      where: isAdmin ? undefined : { users: { some: { userId } } },
       orderBy: { createdAt: "desc" },
-      skip,
-      take: limit,
     }),
-    prisma.project.count({ where: whereClause }),
   ]);
 
-  const totalPages = Math.ceil(total / limit);
-
-  return {
-    projects,
-    total,
-    page,
-    limit,
-    totalPages,
-  };
+  return projects;
 }
 
 /**
  * Get a single project by ID
  */
 export async function getProject(
-  id: number,
+  prisma: PrismaClient,
   userId: string,
-  prisma: PrismaClient
+  isAdmin: boolean,
+  id: number
 ): Promise<ProjectResponse | null> {
   const project = await prisma.project.findFirst({
-    where: { id, userId },
+    select: {
+      id: true,
+      name: true,
+      description: true,
+      icon: true,
+      createdAt: true,
+      updatedAt: true,
+      users: {
+        select: {
+          userId: true,
+          user: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+            },
+          },
+        },
+      },
+    },
+    where: isAdmin ? { id } : { id, users: { some: { userId } } },
   });
 
   return project;
@@ -97,13 +80,12 @@ export async function getProject(
  * Update a project
  */
 export async function updateProject(
+  prisma: PrismaClient,
   id: number,
-  input: UpdateProjectInput,
-  userId: string,
-  prisma: PrismaClient
+  input: UpdateProjectInput
 ): Promise<ProjectResponse> {
   const project = await prisma.project.update({
-    where: { id, userId },
+    where: { id },
     data: {
       ...input,
       updatedAt: new Date(),
@@ -117,36 +99,10 @@ export async function updateProject(
  * Delete a project
  */
 export async function deleteProject(
-  id: number,
-  userId: string,
-  prisma: PrismaClient
+  prisma: PrismaClient,
+  id: number
 ): Promise<void> {
   await prisma.project.delete({
-    where: { id, userId },
+    where: { id },
   });
-}
-
-/**
- * Get project statistics for a user
- */
-export async function getProjectStats(
-  userId: string,
-  prisma: PrismaClient
-): Promise<{
-  totalProjects: number;
-  recentProjects: ProjectResponse[];
-}> {
-  const [totalProjects, recentProjects] = await Promise.all([
-    prisma.project.count({ where: { userId } }),
-    prisma.project.findMany({
-      where: { userId },
-      orderBy: { createdAt: "desc" },
-      take: 5,
-    }),
-  ]);
-
-  return {
-    totalProjects,
-    recentProjects,
-  };
 }

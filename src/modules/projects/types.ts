@@ -12,5 +12,12 @@ export interface ProjectResponse {
   icon: string;
   createdAt: Date;
   updatedAt: Date;
-  userId: string;
+  users?: {
+    userId: string;
+    user: {
+      id: string;
+      name: string;
+      email: string;
+    };
+  }[];
 }
