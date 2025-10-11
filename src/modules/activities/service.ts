@@ -259,3 +259,22 @@ export async function getTopActivities(
     duration: item._sum?.duration || 0,
   }));
 }
+
+/**
+ * Select activities by updating their selected property to true
+ */
+export async function selectActivities(
+  activityIds: string[],
+  userId: string,
+  prisma: PrismaClient
+): Promise<void> {
+  await prisma.activity.updateMany({
+    where: {
+      id: { in: activityIds },
+      userId,
+    },
+    data: {
+      selected: true,
+    },
+  });
+}

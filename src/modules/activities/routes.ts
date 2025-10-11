@@ -6,6 +6,7 @@ import {
   ACTIVITY_ID_PARAM_SCHEMA,
   ACTIVITIES_QUERY_SCHEMA,
   TOP_ACTIVITIES_QUERY_SCHEMA,
+  SELECT_ACTIVITIES_SCHEMA,
 } from "./schema";
 import {
   createActivity,
@@ -15,6 +16,7 @@ import {
   getActivityStats,
   getTopApps,
   getTopActivities,
+  selectActivities,
 } from "./service";
 import z from "zod";
 
@@ -141,6 +143,24 @@ const activityRoutes: FastifyPluginAsync = async (fastify) => {
 
       return reply.send({
         message: "Activity deleted successfully",
+      });
+    },
+  });
+
+  // Select activities
+  fastify.withTypeProvider<ZodTypeProvider>().route({
+    method: "POST",
+    url: "/select",
+    schema: {
+      body: SELECT_ACTIVITIES_SCHEMA,
+    },
+    handler: async (request, reply) => {
+      const { userId = "" } = request.user || {};
+      const { activityIds } = request.body;
+      await selectActivities(activityIds, userId, prisma);
+
+      return reply.send({
+        message: "Activities selected successfully",
       });
     },
   });

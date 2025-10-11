@@ -46,6 +46,8 @@ model Activity {
   duration    Int?
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
+  selected    Boolean   @default(false)
+  merged      Boolean   @default(false)
   user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("activities")
