@@ -268,6 +268,7 @@ export async function selectActivities(
   userId: string,
   prisma: PrismaClient
 ): Promise<void> {
+  // TODO: Handle project addition
   await prisma.activity.updateMany({
     where: {
       id: { in: activityIds },
