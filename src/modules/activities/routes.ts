@@ -158,6 +158,7 @@ const activityRoutes: FastifyPluginAsync = async (fastify) => {
     handler: async (request, reply) => {
       const { userId = "" } = request.user || {};
       const { activityIds, selected } = request.body;
+      // TODO: Assign project to activities
       await selectActivities(activityIds, userId, prisma, selected);
 
       return reply.send({
