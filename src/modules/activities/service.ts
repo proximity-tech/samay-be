@@ -339,8 +339,8 @@ export function groupActivitiesByEntity(
     }
   });
 
-  // Convert grouped data to array and calculate total duration
-  return Object.values(groupedData);
+  // Convert grouped data to array and sort by duration (descending)
+  return Object.values(groupedData).sort((a, b) => b.duration - a.duration);
 }
 
 export async function activitiesForSelection(
