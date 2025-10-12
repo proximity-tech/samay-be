@@ -266,7 +266,8 @@ export async function getTopActivities(
 export async function selectActivities(
   activityIds: string[],
   userId: string,
-  prisma: PrismaClient
+  prisma: PrismaClient,
+  selected: boolean
 ): Promise<void> {
   // TODO: Handle project addition
   await prisma.activity.updateMany({
@@ -275,7 +276,7 @@ export async function selectActivities(
       userId,
     },
     data: {
-      selected: true,
+      selected,
     },
   });
 }

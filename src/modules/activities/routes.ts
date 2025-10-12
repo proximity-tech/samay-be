@@ -157,8 +157,8 @@ const activityRoutes: FastifyPluginAsync = async (fastify) => {
     },
     handler: async (request, reply) => {
       const { userId = "" } = request.user || {};
-      const { activityIds } = request.body;
-      await selectActivities(activityIds, userId, prisma);
+      const { activityIds, selected } = request.body;
+      await selectActivities(activityIds, userId, prisma, selected);
 
       return reply.send({
         message: "Activities selected successfully",

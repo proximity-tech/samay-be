@@ -55,4 +55,5 @@ export const TOP_ACTIVITIES_QUERY_SCHEMA = z.object({
 
 export const SELECT_ACTIVITIES_SCHEMA = z.object({
   activityIds: z.array(z.string().min(1, "Activity ID is required")),
+  selected: z.boolean().default(false),
 });
