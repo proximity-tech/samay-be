@@ -17,6 +17,7 @@ import {
   getTopApps,
   getTopActivities,
   selectActivities,
+  activitiesForSelection,
 } from "./service";
 import z from "zod";
 
@@ -158,6 +159,27 @@ const activityRoutes: FastifyPluginAsync = async (fastify) => {
       const { userId = "" } = request.user || {};
       const { activityIds } = request.body;
       await selectActivities(activityIds, userId, prisma);
+
+      return reply.send({
+        message: "Activities selected successfully",
+      });
+    },
+  });
+
+  // Select activities
+  fastify.withTypeProvider<ZodTypeProvider>().route({
+    method: "GET",
+    url: "/for-user-select",
+    schema: {
+      querystring: ACTIVITIES_QUERY_SCHEMA,
+    },
+    handler: async (request, reply) => {
+      const { userId = "" } = request.user || {};
+      await activitiesForSelection(
+        userId,
+        prisma,
+        request.query.startDate || ""
+      );
 
       return reply.send({
         message: "Activities selected successfully",

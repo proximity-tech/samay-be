@@ -279,3 +279,97 @@ export async function selectActivities(
     },
   });
 }
+
+/**
+ * Group activities by entity (app + title) while preserving individual activity IDs and durations
+ */
+export function groupActivitiesByEntity(
+  activities: Partial<Activity>[]
+): Array<{
+  userId: string;
+  app: string;
+  title: string;
+  selected: boolean;
+  activityIds: string[];
+  duration: number;
+}> {
+  const groupedData: Record<
+    string,
+    {
+      userId: string;
+      app: string;
+      title: string;
+      selected: boolean;
+      activityIds: string[];
+      duration: number;
+    }
+  > = {};
+
+  activities.forEach((activity) => {
+    const {
+      userId = "",
+      app = "",
+      title = "",
+      selected = false,
+      duration = 0,
+      id = "",
+    } = activity;
+
+    if (!userId || !app || !title || !id) {
+      return;
+    }
+
+    const key = `${userId}|${app}|${title}|${selected}`;
+
+    if (groupedData[key]) {
+      // Add to existing group
+      groupedData[key].activityIds.push(id);
+      groupedData[key].duration += duration || 0;
+    } else {
+      // Create new group
+      groupedData[key] = {
+        userId,
+        app,
+        title,
+        selected,
+        activityIds: [id],
+        duration: duration || 0,
+      };
+    }
+  });
+
+  // Convert grouped data to array and calculate total duration
+  return Object.values(groupedData);
+}
+
+export async function activitiesForSelection(
+  userId: string,
+  prisma: PrismaClient,
+  startDate: string
+): Promise<
+  Array<{
+    userId: string;
+    app: string;
+    title: string;
+    selected: boolean;
+    activityIds: string[];
+    duration: number;
+  }>
+> {
+  const start = new Date(startDate);
+  start.setHours(0, 0, 0, 0); // Start of day
+
+  const end = new Date(startDate);
+  end.setHours(23, 59, 59, 999); // End of day
+  const activities = await prisma.activity.findMany({
+    where: {
+      userId,
+      timestamp: {
+        gte: start.toISOString(),
+        lte: end.toISOString(),
+      },
+      app: { notIn: EXCLUDED_APPS },
+    },
+  });
+  return groupActivitiesByEntity(activities);
+}
