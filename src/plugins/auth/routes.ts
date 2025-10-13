@@ -19,9 +19,9 @@ export const adminRoutes: Record<string, Record<string, boolean>> = {
   POST: {
     "/users/invite": true,
     "/projects": true,
+    "/projects/:id/users": true,
   },
   GET: {
-    "/users": true,
     "/users/:id": true,
   },
   PUT: {
@@ -31,6 +31,7 @@ export const adminRoutes: Record<string, Record<string, boolean>> = {
   DELETE: {
     "/users/:id": true,
     "/projects/:id": true,
+    "/projects/:id/users/:userId": true,
   },
 };
 

@@ -1,22 +1,22 @@
-import { Project, PrismaClient } from "@prisma/client";
+import { PrismaClient } from "@prisma/client";
 import {
   ProjectResponse,
   CreateProjectInput,
   UpdateProjectInput,
+  AddUsersToProjectInput,
 } from "./types";
 
 /**
  * Create a new project
  */
 export async function createProject(
-  input: CreateProjectInput,
-  userId: string,
-  prisma: PrismaClient
+  prisma: PrismaClient,
+  input: CreateProjectInput
 ): Promise<ProjectResponse> {
   const project = await prisma.project.create({
     data: {
       ...input,
-      userId,
+      icon: input.icon || "",
     },
   });
 
@@ -27,67 +27,75 @@ export async function createProject(
  * Get all projects for a user with pagination and search
  */
 export async function getProjects(
+  prisma: PrismaClient,
   userId: string,
-  query: {
-    page?: string;
-    limit?: string;
-    search?: string;
-  },
-  prisma: PrismaClient
-): Promise<{
-  projects: Project[];
-  total: number;
-  page: number;
-  limit: number;
-  totalPages: number;
-}> {
-  const page = parseInt(query.page || "1");
-  const limit = parseInt(query.limit || "10");
-  const skip = (page - 1) * limit;
-
-  const whereClause = {
-    userId,
-    ...(query.search && {
-      OR: [
-        { name: { contains: query.search, mode: "insensitive" as const } },
-        {
-          description: { contains: query.search, mode: "insensitive" as const },
-        },
-      ],
-    }),
-  };
-
-  const [projects, total] = await Promise.all([
+  isAdmin: boolean
+): Promise<ProjectResponse[]> {
+  const [projects] = await Promise.all([
     prisma.project.findMany({
-      where: whereClause,
+      where: {
+        users: { some: isAdmin ? { active: true } : { userId, active: true } },
+      },
       orderBy: { createdAt: "desc" },
-      skip,
-      take: limit,
+      select: {
+        id: true,
+        name: true,
+        description: true,
+        icon: true,
+        createdAt: true,
+        updatedAt: true,
+        users: {
+          where: { active: true },
+          select: {
+            userId: true,
+            user: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+              },
+            },
+          },
+        },
+      },
     }),
-    prisma.project.count({ where: whereClause }),
   ]);
 
-  const totalPages = Math.ceil(total / limit);
-
-  return {
-    projects,
-    total,
-    page,
-    limit,
-    totalPages,
-  };
+  return projects;
 }
 
 /**
  * Get a single project by ID
  */
 export async function getProject(
-  id: number,
+  prisma: PrismaClient,
   userId: string,
-  prisma: PrismaClient
+  isAdmin: boolean,
+  id: number
 ): Promise<ProjectResponse | null> {
   const project = await prisma.project.findFirst({
-    where: { id, userId },
+    select: {
+      id: true,
+      name: true,
+      description: true,
+      icon: true,
+      createdAt: true,
+      updatedAt: true,
+      users: {
+        where: { active: true },
+        select: {
+          userId: true,
+          user: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+            },
+          },
+        },
+      },
+    },
+    where: isAdmin ? { id } : { id, users: { some: { userId, active: true } } },
   });
 
   return project;
@@ -97,13 +105,12 @@ export async function getProject(
  * Update a project
  */
 export async function updateProject(
+  prisma: PrismaClient,
   id: number,
-  input: UpdateProjectInput,
-  userId: string,
-  prisma: PrismaClient
+  input: UpdateProjectInput
 ): Promise<ProjectResponse> {
   const project = await prisma.project.update({
-    where: { id, userId },
+    where: { id },
     data: {
       ...input,
       updatedAt: new Date(),
@@ -117,36 +124,86 @@ export async function updateProject(
  * Delete a project
  */
 export async function deleteProject(
-  id: number,
-  userId: string,
-  prisma: PrismaClient
+  prisma: PrismaClient,
+  id: number
 ): Promise<void> {
   await prisma.project.delete({
-    where: { id, userId },
+    where: { id },
   });
 }
 
 /**
- * Get project statistics for a user
+ * Add users to a project
  */
-export async function getProjectStats(
-  userId: string,
-  prisma: PrismaClient
-): Promise<{
-  totalProjects: number;
-  recentProjects: ProjectResponse[];
-}> {
-  const [totalProjects, recentProjects] = await Promise.all([
-    prisma.project.count({ where: { userId } }),
-    prisma.project.findMany({
-      where: { userId },
-      orderBy: { createdAt: "desc" },
-      take: 5,
-    }),
-  ]);
+export async function addUsersToProject(
+  prisma: PrismaClient,
+  projectId: number,
+  input: AddUsersToProjectInput
+) {
+  const existingRelations = await prisma.projectUser.findMany({
+    where: {
+      projectId,
+      userId: {
+        in: input.userIds,
+      },
+    },
+    select: { userId: true },
+  });
 
-  return {
-    totalProjects,
-    recentProjects,
-  };
+  await prisma.$transaction(async (tx) => {
+    // Check for existing project-user relationships
+
+    const existingUserIds = existingRelations.map((rel) => rel.userId);
+    const newUserIds = input.userIds.filter(
+      (id) => !existingUserIds.includes(id)
+    );
+
+    // Reactivate existing users
+    if (existingUserIds.length > 0) {
+      await tx.projectUser.updateMany({
+        where: {
+          projectId,
+          userId: {
+            in: existingUserIds,
+          },
+        },
+        data: {
+          active: true,
+        },
+      });
+    }
+
+    // Add new users to the project
+    if (newUserIds.length > 0) {
+      await tx.projectUser.createMany({
+        data: newUserIds.map((userId) => ({
+          projectId,
+          userId,
+          active: true,
+        })),
+      });
+    }
+  });
+}
+
+/**
+ * Delete users from a project
+ */
+export async function deleteUsersFromProject(
+  prisma: PrismaClient,
+  projectId: number,
+  userId: string
+) {
+  // Delete users from the project
+  await prisma.projectUser.updateMany({
+    where: {
+      projectId,
+      userId: {
+        in: [userId],
+      },
+    },
+    data: {
+      active: false,
+    },
+  });
 }

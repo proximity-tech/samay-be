@@ -189,6 +189,28 @@ export async function getCurrentUser(
 }
 
 /**
+ * Get all users (admin only)
+ */
+export async function getAllUsers(
+  prisma: PrismaClient
+): Promise<UserResponse[]> {
+  const users = await prisma.user.findMany({
+    select: {
+      id: true,
+      email: true,
+      name: true,
+      role: true,
+      createdAt: true,
+    },
+    orderBy: {
+      createdAt: "desc",
+    },
+  });
+
+  return users;
+}
+
+/**
  * Generate JWT token
  */
 function generateToken(user: User): string {
