@@ -21,7 +21,6 @@ export const adminRoutes: Record<string, Record<string, boolean>> = {
     "/projects": true,
   },
   GET: {
-    "/users": true,
     "/users/:id": true,
   },
   PUT: {
