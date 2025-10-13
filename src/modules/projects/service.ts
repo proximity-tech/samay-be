@@ -3,6 +3,7 @@ import {
   ProjectResponse,
   CreateProjectInput,
   UpdateProjectInput,
+  AddUsersToProjectInput,
 } from "./types";
 
 /**
@@ -32,8 +33,31 @@ export async function getProjects(
 ): Promise<ProjectResponse[]> {
   const [projects] = await Promise.all([
     prisma.project.findMany({
-      where: isAdmin ? undefined : { users: { some: { userId } } },
+      where: {
+        users: { some: isAdmin ? { active: true } : { userId, active: true } },
+      },
       orderBy: { createdAt: "desc" },
+      select: {
+        id: true,
+        name: true,
+        description: true,
+        icon: true,
+        createdAt: true,
+        updatedAt: true,
+        users: {
+          where: { active: true },
+          select: {
+            userId: true,
+            user: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+              },
+            },
+          },
+        },
+      },
     }),
   ]);
 
@@ -58,6 +82,7 @@ export async function getProject(
       createdAt: true,
       updatedAt: true,
       users: {
+        where: { active: true },
         select: {
           userId: true,
           user: {
@@ -70,7 +95,7 @@ export async function getProject(
         },
       },
     },
-    where: isAdmin ? { id } : { id, users: { some: { userId } } },
+    where: isAdmin ? { id } : { id, users: { some: { userId, active: true } } },
   });
 
   return project;
@@ -104,5 +129,81 @@ export async function deleteProject(
 ): Promise<void> {
   await prisma.project.delete({
     where: { id },
+  });
+}
+
+/**
+ * Add users to a project
+ */
+export async function addUsersToProject(
+  prisma: PrismaClient,
+  projectId: number,
+  input: AddUsersToProjectInput
+) {
+  const existingRelations = await prisma.projectUser.findMany({
+    where: {
+      projectId,
+      userId: {
+        in: input.userIds,
+      },
+    },
+    select: { userId: true },
+  });
+
+  await prisma.$transaction(async (tx) => {
+    // Check for existing project-user relationships
+
+    const existingUserIds = existingRelations.map((rel) => rel.userId);
+    const newUserIds = input.userIds.filter(
+      (id) => !existingUserIds.includes(id)
+    );
+
+    // Reactivate existing users
+    if (existingUserIds.length > 0) {
+      await tx.projectUser.updateMany({
+        where: {
+          projectId,
+          userId: {
+            in: existingUserIds,
+          },
+        },
+        data: {
+          active: true,
+        },
+      });
+    }
+
+    // Add new users to the project
+    if (newUserIds.length > 0) {
+      await tx.projectUser.createMany({
+        data: newUserIds.map((userId) => ({
+          projectId,
+          userId,
+          active: true,
+        })),
+      });
+    }
+  });
+}
+
+/**
+ * Delete users from a project
+ */
+export async function deleteUsersFromProject(
+  prisma: PrismaClient,
+  projectId: number,
+  userId: string
+) {
+  // Delete users from the project
+  await prisma.projectUser.updateMany({
+    where: {
+      projectId,
+      userId: {
+        in: [userId],
+      },
+    },
+    data: {
+      active: false,
+    },
   });
 }

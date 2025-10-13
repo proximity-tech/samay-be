@@ -4,6 +4,8 @@ import {
   CREATE_PROJECT_SCHEMA,
   UPDATE_PROJECT_SCHEMA,
   PROJECT_ID_PARAM_SCHEMA,
+  ADD_USERS_TO_PROJECT_SCHEMA,
+  DELETE_USERS_FROM_PROJECT_PARAM_SCHEMA,
 } from "./schema";
 import {
   createProject,
@@ -11,6 +13,8 @@ import {
   getProject,
   updateProject,
   deleteProject,
+  addUsersToProject,
+  deleteUsersFromProject,
 } from "./service";
 
 const projectRoutes: FastifyPluginAsync = async (fastify) => {
@@ -109,6 +113,44 @@ const projectRoutes: FastifyPluginAsync = async (fastify) => {
       await deleteProject(prisma, projectId);
       return reply.send({
         message: "Project deleted successfully",
+      });
+    },
+  });
+
+  // Add users to project
+  fastify.withTypeProvider<ZodTypeProvider>().route({
+    method: "POST",
+    url: "/:id/users",
+    schema: {
+      params: PROJECT_ID_PARAM_SCHEMA,
+      body: ADD_USERS_TO_PROJECT_SCHEMA,
+    },
+    handler: async (request, reply) => {
+      const { id } = request.params;
+      const projectId = parseInt(id);
+      const input = request.body;
+
+      await addUsersToProject(prisma, projectId, input);
+      return reply.send({
+        message: "Users added to project successfully",
+      });
+    },
+  });
+
+  // Delete users from project
+  fastify.withTypeProvider<ZodTypeProvider>().route({
+    method: "DELETE",
+    url: "/:id/users/:userId",
+    schema: {
+      params: DELETE_USERS_FROM_PROJECT_PARAM_SCHEMA,
+    },
+    handler: async (request, reply) => {
+      const { id, userId } = request.params;
+      const projectId = parseInt(id);
+
+      await deleteUsersFromProject(prisma, projectId, userId);
+      return reply.send({
+        message: "Users removed from project successfully",
       });
     },
   });

@@ -28,3 +28,22 @@ export const UPDATE_PROJECT_SCHEMA = z.object({
 export const PROJECT_ID_PARAM_SCHEMA = z.object({
   id: z.string().min(1, "Project ID is required"),
 });
+
+export const DELETE_USERS_FROM_PROJECT_PARAM_SCHEMA = z.object({
+  id: z.string().min(1, "Project ID is required"),
+  userId: z.string().min(1, "User ID is required"),
+});
+
+export const ADD_USERS_TO_PROJECT_SCHEMA = z.object({
+  userIds: z
+    .array(z.string().min(1, "User ID is required"))
+    .min(1, "At least one user ID is required")
+    .max(50, "Cannot add more than 50 users at once"),
+});
+
+export const DELETE_USERS_FROM_PROJECT_SCHEMA = z.object({
+  userIds: z
+    .array(z.string().min(1, "User ID is required"))
+    .min(1, "At least one user ID is required")
+    .max(50, "Cannot delete more than 50 users at once"),
+});
