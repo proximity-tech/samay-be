@@ -12,6 +12,7 @@ import errorHandlerPlugin from "./plugins/error/plugin";
 import authMiddleware from "./plugins/auth/auth";
 import authRoutes from "./modules/auth/routes";
 import activityRoutes from "./modules/activities/routes";
+import projectRoutes from "./modules/projects/routes";
 const app = Fastify({
   logger: true,
 });
@@ -61,6 +62,7 @@ app.register(authMiddleware);
 // Register routes
 app.register(authRoutes, { prefix: "/auth" });
 app.register(activityRoutes, { prefix: "/activities" });
+app.register(projectRoutes, { prefix: "/projects" });
 
 app.get("/", async function handler() {
   return "Tick Tick Track your activity without fuss";

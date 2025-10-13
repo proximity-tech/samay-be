@@ -4,7 +4,8 @@ import {
   CREATE_PROJECT_SCHEMA,
   UPDATE_PROJECT_SCHEMA,
   PROJECT_ID_PARAM_SCHEMA,
-  PROJECTS_QUERY_SCHEMA,
+  ADD_USERS_TO_PROJECT_SCHEMA,
+  DELETE_USERS_FROM_PROJECT_PARAM_SCHEMA,
 } from "./schema";
 import {
   createProject,
@@ -12,6 +13,8 @@ import {
   getProject,
   updateProject,
   deleteProject,
+  addUsersToProject,
+  deleteUsersFromProject,
 } from "./service";
 
 const projectRoutes: FastifyPluginAsync = async (fastify) => {
@@ -25,9 +28,8 @@ const projectRoutes: FastifyPluginAsync = async (fastify) => {
       body: CREATE_PROJECT_SCHEMA,
     },
     handler: async (request, reply) => {
-      const { userId = "" } = request.user || {};
       const input = request.body;
-      const result = await createProject(input, userId, prisma);
+      const result = await createProject(prisma, input);
 
       return reply.status(201).send({
         data: result,
@@ -40,13 +42,9 @@ const projectRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.withTypeProvider<ZodTypeProvider>().route({
     method: "GET",
     url: "/",
-    schema: {
-      querystring: PROJECTS_QUERY_SCHEMA,
-    },
     handler: async (request, reply) => {
-      const { userId = "" } = request.user || {};
-      const query = request.query;
-      const result = await getProjects(userId, query, prisma);
+      const { userId = "", role = "" } = request.user || {};
+      const result = await getProjects(prisma, userId, role == "ADMIN");
 
       return reply.send({
         data: result,
@@ -62,11 +60,16 @@ const projectRoutes: FastifyPluginAsync = async (fastify) => {
       params: PROJECT_ID_PARAM_SCHEMA,
     },
     handler: async (request, reply) => {
-      const { userId = "" } = request.user || {};
+      const { userId = "", role = "" } = request.user || {};
       const { id } = request.params;
       const projectId = parseInt(id);
 
-      const result = await getProject(projectId, userId, prisma);
+      const result = await getProject(
+        prisma,
+        userId,
+        role == "ADMIN",
+        projectId
+      );
 
       return reply.send({
         data: result,
@@ -83,13 +86,12 @@ const projectRoutes: FastifyPluginAsync = async (fastify) => {
       body: UPDATE_PROJECT_SCHEMA,
     },
     handler: async (request, reply) => {
-      const { userId = "" } = request.user || {};
       const { id } = request.params;
       const projectId = parseInt(id);
 
       const input = request.body;
 
-      const result = await updateProject(projectId, input, userId, prisma);
+      const result = await updateProject(prisma, projectId, input);
       return reply.send({
         data: result,
         message: "Project updated successfully",
@@ -105,13 +107,50 @@ const projectRoutes: FastifyPluginAsync = async (fastify) => {
       params: PROJECT_ID_PARAM_SCHEMA,
     },
     handler: async (request, reply) => {
-      const { userId = "" } = request.user || {};
       const { id } = request.params;
       const projectId = parseInt(id);
 
-      await deleteProject(projectId, userId, prisma);
+      await deleteProject(prisma, projectId);
       return reply.send({
         message: "Project deleted successfully",
+      });
+    },
+  });
+
+  // Add users to project
+  fastify.withTypeProvider<ZodTypeProvider>().route({
+    method: "POST",
+    url: "/:id/users",
+    schema: {
+      params: PROJECT_ID_PARAM_SCHEMA,
+      body: ADD_USERS_TO_PROJECT_SCHEMA,
+    },
+    handler: async (request, reply) => {
+      const { id } = request.params;
+      const projectId = parseInt(id);
+      const input = request.body;
+
+      await addUsersToProject(prisma, projectId, input);
+      return reply.send({
+        message: "Users added to project successfully",
+      });
+    },
+  });
+
+  // Delete users from project
+  fastify.withTypeProvider<ZodTypeProvider>().route({
+    method: "DELETE",
+    url: "/:id/users/:userId",
+    schema: {
+      params: DELETE_USERS_FROM_PROJECT_PARAM_SCHEMA,
+    },
+    handler: async (request, reply) => {
+      const { id, userId } = request.params;
+      const projectId = parseInt(id);
+
+      await deleteUsersFromProject(prisma, projectId, userId);
+      return reply.send({
+        message: "Users removed from project successfully",
       });
     },
   });

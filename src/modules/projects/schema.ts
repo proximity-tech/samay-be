@@ -9,10 +9,7 @@ export const CREATE_PROJECT_SCHEMA = z.object({
     .string()
     .max(500, "Description must be less than 500 characters")
     .optional(),
-  icon: z
-    .string()
-    .min(1, "Project icon is required")
-    .max(50, "Icon must be less than 50 characters"),
+  icon: z.string().optional(),
 });
 
 export const UPDATE_PROJECT_SCHEMA = z.object({
@@ -25,19 +22,28 @@ export const UPDATE_PROJECT_SCHEMA = z.object({
     .string()
     .max(500, "Description must be less than 500 characters")
     .optional(),
-  icon: z
-    .string()
-    .min(1, "Project icon is required")
-    .max(50, "Icon must be less than 50 characters")
-    .optional(),
+  icon: z.string().optional(),
 });
 
 export const PROJECT_ID_PARAM_SCHEMA = z.object({
   id: z.string().min(1, "Project ID is required"),
 });
 
-export const PROJECTS_QUERY_SCHEMA = z.object({
-  page: z.string().optional().default("1"),
-  limit: z.string().optional().default("10"),
-  search: z.string().optional(),
+export const DELETE_USERS_FROM_PROJECT_PARAM_SCHEMA = z.object({
+  id: z.string().min(1, "Project ID is required"),
+  userId: z.string().min(1, "User ID is required"),
+});
+
+export const ADD_USERS_TO_PROJECT_SCHEMA = z.object({
+  userIds: z
+    .array(z.string().min(1, "User ID is required"))
+    .min(1, "At least one user ID is required")
+    .max(50, "Cannot add more than 50 users at once"),
+});
+
+export const DELETE_USERS_FROM_PROJECT_SCHEMA = z.object({
+  userIds: z
+    .array(z.string().min(1, "User ID is required"))
+    .min(1, "At least one user ID is required")
+    .max(50, "Cannot delete more than 50 users at once"),
 });
