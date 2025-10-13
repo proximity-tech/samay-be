@@ -57,3 +57,8 @@ export const SELECT_ACTIVITIES_SCHEMA = z.object({
   activityIds: z.array(z.string().min(1, "Activity ID is required")),
   selected: z.boolean().default(false),
 });
+
+export const ADD_PROJECT_SCHEMA = z.object({
+  activityIds: z.array(z.string().min(1, "Activity ID is required")),
+  projectId: z.number().min(1, "Project ID is required"),
+});

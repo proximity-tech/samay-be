@@ -8,18 +8,17 @@ datasource db {
 }
 
 model User {
-  id         String     @id @default(cuid())
-  email      String     @unique
-  password   String
-  name       String
-  role       Role       @default(USER)
-  createdAt  DateTime   @default(now())
-  updatedAt  DateTime   @updatedAt  // Automatically updated when record is modified
-
-  // Relations
-  activities Activity[]
-  sessions   Session[]
+  id           String        @id @default(cuid())
+  email        String        @unique
+  password     String
+  name         String
+  role         Role          @default(USER)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  activities   Activity[]
   projectUsers ProjectUser[]
+  sessions     Session[]
+
   @@map("users")
 }
 
@@ -36,7 +35,7 @@ model Session {
 }
 
 model Activity {
-  id          String    @id @default(cuid())
+  id          String   @id @default(cuid())
   userId      String
   app         String
   url         String
@@ -44,33 +43,38 @@ model Activity {
   description String?
   timestamp   String
   duration    Int?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  selected    Boolean   @default(false)
-  merged      Boolean   @default(false)
-  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  merged      Boolean  @default(false)
+  selected    Boolean  @default(false)
+  projectId   Int?
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  project     Project? @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
   @@map("activities")
 }
-// TODO: add user selected activites to project when user dragged and dropped
+
 model Project {
-  id Int @id @default(autoincrement())
-  name String
+  id          Int           @id @default(autoincrement())
+  name        String
   description String?
-  icon String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @default(now())
-  users ProjectUser[]
+  icon        String
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @default(now())
+  users       ProjectUser[]
+  activities  Activity[]
+
   @@map("projects")
 }
 
 model ProjectUser {
-  id Int @id @default(autoincrement())
+  id        Int     @id @default(autoincrement())
   projectId Int
-  userId String
-  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-  active Boolean @default(true)
+  userId    String
+  active    Boolean @default(true)
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@map("project_users")
 }
 

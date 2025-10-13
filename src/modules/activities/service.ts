@@ -374,3 +374,41 @@ export async function activitiesForSelection(
   });
   return groupActivitiesByEntity(activities);
 }
+
+/**
+ * Add activities to a project by updating their projectId
+ */
+export async function addActivitiesToProject(
+  activityIds: string[],
+  projectId: number,
+  userId: string,
+  prisma: PrismaClient
+): Promise<void> {
+  // First verify that the project exists and the user has access to it
+  const project = await prisma.project.findFirst({
+    where: {
+      id: projectId,
+      users: {
+        some: {
+          userId,
+          active: true,
+        },
+      },
+    },
+  });
+
+  if (!project) {
+    throw new Error("Project not found or user does not have access to it");
+  }
+
+  // Update all activities with the project ID
+  await prisma.activity.updateMany({
+    where: {
+      id: { in: activityIds },
+      userId,
+    },
+    data: {
+      projectId,
+    },
+  });
+}

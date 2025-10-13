@@ -7,6 +7,7 @@ import {
   ACTIVITIES_QUERY_SCHEMA,
   TOP_ACTIVITIES_QUERY_SCHEMA,
   SELECT_ACTIVITIES_SCHEMA,
+  ADD_PROJECT_SCHEMA,
 } from "./schema";
 import {
   createActivity,
@@ -18,6 +19,7 @@ import {
   getTopActivities,
   selectActivities,
   activitiesForSelection,
+  addActivitiesToProject,
 } from "./service";
 import z from "zod";
 
@@ -185,6 +187,34 @@ const activityRoutes: FastifyPluginAsync = async (fastify) => {
       return reply.send({
         data: result,
       });
+    },
+  });
+
+  // Add activities to project
+  fastify.withTypeProvider<ZodTypeProvider>().route({
+    method: "POST",
+    url: "/add-project",
+    schema: {
+      body: ADD_PROJECT_SCHEMA,
+    },
+    handler: async (request, reply) => {
+      const { userId = "" } = request.user || {};
+      const { activityIds, projectId } = request.body;
+
+      try {
+        await addActivitiesToProject(activityIds, projectId, userId, prisma);
+
+        return reply.send({
+          message: "Activities added to project successfully",
+        });
+      } catch (error) {
+        return reply.status(400).send({
+          error:
+            error instanceof Error
+              ? error.message
+              : "Failed to add activities to project",
+        });
+      }
     },
   });
 };
