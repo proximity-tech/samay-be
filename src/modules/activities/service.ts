@@ -1,4 +1,4 @@
-import { Activity, PrismaClient } from "@prisma/client";
+import { Activity, PrismaClient, Project } from "@prisma/client";
 import {
   ActivityResponse,
   CreateActivityInput,
@@ -285,7 +285,7 @@ export async function selectActivities(
  * Group activities by entity (app + title) while preserving individual activity IDs and durations
  */
 export function groupActivitiesByEntity(
-  activities: Partial<Activity>[]
+  activities: Partial<Activity & { project: Project | null }>[]
 ): Array<{
   userId: string;
   app: string;
@@ -293,6 +293,8 @@ export function groupActivitiesByEntity(
   selected: boolean;
   activityIds: string[];
   duration: number;
+  projectId: number | null;
+  projectName: string | null;
 }> {
   const groupedData: Record<
     string,
@@ -303,6 +305,8 @@ export function groupActivitiesByEntity(
       selected: boolean;
       activityIds: string[];
       duration: number;
+      projectId: number | null;
+      projectName: string | null;
     }
   > = {};
 
@@ -314,6 +318,8 @@ export function groupActivitiesByEntity(
       selected = false,
       duration = 0,
       id = "",
+      projectId = null,
+      project,
     } = activity;
 
     if (!userId || !app || !title || !id) {
@@ -335,6 +341,8 @@ export function groupActivitiesByEntity(
         selected,
         activityIds: [id],
         duration: duration || 0,
+        projectId,
+        projectName: project?.name || "",
       };
     }
   });
@@ -355,6 +363,8 @@ export async function activitiesForSelection(
     selected: boolean;
     activityIds: string[];
     duration: number;
+    projectId: number | null;
+    projectName: string | null;
   }>
 > {
   const start = new Date(startDate);
@@ -370,6 +380,9 @@ export async function activitiesForSelection(
         lte: end.toISOString(),
       },
       app: { notIn: EXCLUDED_APPS },
+    },
+    include: {
+      project: true,
     },
   });
   return groupActivitiesByEntity(activities);

@@ -34,7 +34,7 @@ export async function getProjects(
   const [projects] = await Promise.all([
     prisma.project.findMany({
       where: {
-        users: { some: isAdmin ? { active: true } : { userId, active: true } },
+        users: isAdmin ? undefined : { some: { userId } },
       },
       orderBy: { createdAt: "desc" },
       select: {
@@ -95,7 +95,7 @@ export async function getProject(
         },
       },
     },
-    where: isAdmin ? { id } : { id, users: { some: { userId, active: true } } },
+    where: isAdmin ? { id } : { id, users: { some: { userId } } },
   });
 
   return project;

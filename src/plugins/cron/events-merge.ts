@@ -12,6 +12,8 @@ interface AggregatedActivity {
   timestamp: string;
   url: string;
   merged: boolean;
+  projectId: number | null;
+  mergedTimestamp: string;
 }
 
 const mergeActivities = (
@@ -30,6 +32,7 @@ const mergeActivities = (
       id = "",
       timestamp = "",
       url = "",
+      projectId = null,
     } = activity;
 
     if (!userId || !app || !title) {
@@ -38,11 +41,17 @@ const mergeActivities = (
 
     const key = `${userId}|${app}|${title}|${selected}`;
     allIds.push(id);
+
+    const mergedTimestamp =
+      timestamp && duration ? `${timestamp}|${duration}` : "";
+
     if (groupedData[key]) {
       // Add duration to existing group
       groupedData[key].duration += duration || 0;
-      groupedData[key].timestamp += timestamp ? `,${timestamp}` : "";
       groupedData[key].url += url ? `,${url}` : "";
+      groupedData[key].mergedTimestamp += mergedTimestamp
+        ? `,${mergedTimestamp}`
+        : "";
     } else {
       // Create new group
       groupedData[key] = {
@@ -51,9 +60,11 @@ const mergeActivities = (
         title,
         selected,
         duration: duration || 0,
-        timestamp: timestamp ? `${timestamp}` : "",
+        timestamp,
         url: url ? `${url}` : "",
         merged: true,
+        projectId,
+        mergedTimestamp: mergedTimestamp || "",
       };
     }
   });
@@ -81,6 +92,7 @@ export const createEventsMergeJob = (fastify: FastifyInstance) => {
             selected: true,
             timestamp: true,
             duration: true,
+            projectId: true,
           },
         });
 

@@ -42,6 +42,7 @@ model Activity {
   title       String
   description String?
   timestamp   String
+  mergedTimestamp String?
   duration    Int?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -50,7 +51,7 @@ model Activity {
   projectId   Int?
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   project     Project? @relation(fields: [projectId], references: [id], onDelete: Cascade)
-
+  
   @@map("activities")
 }
 
