@@ -2,6 +2,7 @@ import Fastify from "fastify";
 import fastifySwagger from "@fastify/swagger";
 import cors from "@fastify/cors";
 import fastifySwaggerUI from "@fastify/swagger-ui";
+import fastifySchedule from "@fastify/schedule";
 import {
   jsonSchemaTransform,
   serializerCompiler,
@@ -12,6 +13,7 @@ import errorHandlerPlugin from "./plugins/error/plugin";
 import authMiddleware from "./plugins/auth/auth";
 import authRoutes from "./modules/auth/routes";
 import activityRoutes from "./modules/activities/routes";
+// import { createEventsMergeJob } from "./plugins/cron/events-merge";
 import projectRoutes from "./modules/projects/routes";
 const app = Fastify({
   logger: true,
@@ -25,7 +27,7 @@ app.register(cors, {
 
 app.register(prismaPlugin);
 app.register(errorHandlerPlugin);
-
+app.register(fastifySchedule);
 app.setValidatorCompiler(validatorCompiler);
 app.setSerializerCompiler(serializerCompiler);
 
@@ -77,4 +79,10 @@ app.listen({ port: parseInt(process.env.PORT || "3000") }, (err) => {
     app.log.error(err);
     process.exit(1);
   }
+});
+
+app.ready().then(() => {
+  console.log("App is ready");
+  // const eventsMergeJob = createEventsMergeJob(app);
+  // app.scheduler.addCronJob(eventsMergeJob);
 });

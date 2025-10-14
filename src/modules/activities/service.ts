@@ -1,4 +1,4 @@
-import { Activity, PrismaClient } from "@prisma/client";
+import { Activity, PrismaClient, Project } from "@prisma/client";
 import {
   ActivityResponse,
   CreateActivityInput,
@@ -258,4 +258,170 @@ export async function getTopActivities(
     title: item.title,
     duration: item._sum?.duration || 0,
   }));
+}
+
+/**
+ * Select activities by updating their selected property to true
+ */
+export async function selectActivities(
+  activityIds: string[],
+  userId: string,
+  prisma: PrismaClient,
+  selected: boolean
+): Promise<void> {
+  // TODO: Handle project addition
+  await prisma.activity.updateMany({
+    where: {
+      id: { in: activityIds },
+      userId,
+    },
+    data: {
+      selected,
+    },
+  });
+}
+
+/**
+ * Group activities by entity (app + title) while preserving individual activity IDs and durations
+ */
+export function groupActivitiesByEntity(
+  activities: Partial<Activity & { project: Project | null }>[]
+): Array<{
+  userId: string;
+  app: string;
+  title: string;
+  selected: boolean;
+  activityIds: string[];
+  duration: number;
+  projectId: number | null;
+  projectName: string | null;
+}> {
+  const groupedData: Record<
+    string,
+    {
+      userId: string;
+      app: string;
+      title: string;
+      selected: boolean;
+      activityIds: string[];
+      duration: number;
+      projectId: number | null;
+      projectName: string | null;
+    }
+  > = {};
+
+  activities.forEach((activity) => {
+    const {
+      userId = "",
+      app = "",
+      title = "",
+      selected = false,
+      duration = 0,
+      id = "",
+      projectId = null,
+      project,
+    } = activity;
+
+    if (!userId || !app || !title || !id) {
+      return;
+    }
+
+    const key = `${userId}|${app}|${title}|${selected}`;
+
+    if (groupedData[key]) {
+      // Add to existing group
+      groupedData[key].activityIds.push(id);
+      groupedData[key].duration += duration || 0;
+    } else {
+      // Create new group
+      groupedData[key] = {
+        userId,
+        app,
+        title,
+        selected,
+        activityIds: [id],
+        duration: duration || 0,
+        projectId,
+        projectName: project?.name || "",
+      };
+    }
+  });
+
+  // Convert grouped data to array and sort by duration (descending)
+  return Object.values(groupedData).sort((a, b) => b.duration - a.duration);
+}
+
+export async function activitiesForSelection(
+  userId: string,
+  prisma: PrismaClient,
+  startDate: string
+): Promise<
+  Array<{
+    userId: string;
+    app: string;
+    title: string;
+    selected: boolean;
+    activityIds: string[];
+    duration: number;
+    projectId: number | null;
+    projectName: string | null;
+  }>
+> {
+  const start = new Date(startDate);
+  start.setHours(0, 0, 0, 0); // Start of day
+
+  const end = new Date(startDate);
+  end.setHours(23, 59, 59, 999); // End of day
+  const activities = await prisma.activity.findMany({
+    where: {
+      userId,
+      timestamp: {
+        gte: start.toISOString(),
+        lte: end.toISOString(),
+      },
+      app: { notIn: EXCLUDED_APPS },
+    },
+    include: {
+      project: true,
+    },
+  });
+  return groupActivitiesByEntity(activities);
+}
+
+/**
+ * Add activities to a project by updating their projectId
+ */
+export async function addActivitiesToProject(
+  activityIds: string[],
+  projectId: number,
+  userId: string,
+  prisma: PrismaClient
+): Promise<void> {
+  // First verify that the project exists and the user has access to it
+  const project = await prisma.project.findFirst({
+    where: {
+      id: projectId,
+      users: {
+        some: {
+          userId,
+          active: true,
+        },
+      },
+    },
+  });
+
+  if (!project) {
+    throw new Error("Project not found or user does not have access to it");
+  }
+
+  // Update all activities with the project ID
+  await prisma.activity.updateMany({
+    where: {
+      id: { in: activityIds },
+      userId,
+    },
+    data: {
+      projectId,
+    },
+  });
 }
