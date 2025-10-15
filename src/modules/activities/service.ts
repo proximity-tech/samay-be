@@ -354,7 +354,8 @@ export function groupActivitiesByEntity(
 export async function activitiesForSelection(
   userId: string,
   prisma: PrismaClient,
-  startDate: string
+  startDate: string,
+  endDate: string
 ): Promise<
   Array<{
     userId: string;
@@ -367,17 +368,12 @@ export async function activitiesForSelection(
     projectName: string | null;
   }>
 > {
-  const start = new Date(startDate);
-  start.setHours(0, 0, 0, 0); // Start of day
-
-  const end = new Date(startDate);
-  end.setHours(23, 59, 59, 999); // End of day
   const activities = await prisma.activity.findMany({
     where: {
       userId,
       timestamp: {
-        gte: start.toISOString(),
-        lte: end.toISOString(),
+        gte: startDate,
+        lte: endDate,
       },
       app: { notIn: EXCLUDED_APPS },
     },

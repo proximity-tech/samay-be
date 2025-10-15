@@ -178,10 +178,12 @@ const activityRoutes: FastifyPluginAsync = async (fastify) => {
     },
     handler: async (request, reply) => {
       const { userId = "" } = request.user || {};
+      const { startDate = "", endDate = "" } = request.query;
       const result = await activitiesForSelection(
         userId,
         prisma,
-        request.query.startDate || ""
+        startDate,
+        endDate
       );
 
       return reply.send({
