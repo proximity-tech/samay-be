@@ -51,8 +51,8 @@ model Activity {
   projectId   Int?
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   project     Project? @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  autoTags    String[]
-  isAutoTagged Boolean
+  autoTags    String[] @default([])
+  isAutoTagged Boolean @default(false)
   @@map("activities")
 }
 
