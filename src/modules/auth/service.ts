@@ -211,6 +211,31 @@ export async function getAllUsers(
 }
 
 /**
+ * Get user by ID
+ */
+export async function getUserById(
+  userId: string,
+  prisma: PrismaClient
+): Promise<UserResponse> {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: {
+      id: true,
+      email: true,
+      name: true,
+      role: true,
+      createdAt: true,
+    },
+  });
+
+  if (!user) {
+    throw new AppError("User not found", 404, "USER_NOT_FOUND");
+  }
+
+  return user;
+}
+
+/**
  * Generate JWT token
  */
 function generateToken(user: User): string {

@@ -1,11 +1,12 @@
 import { FastifyPluginAsync } from "fastify";
-import { LOGIN_SCHEMA, REGISTER_SCHEMA } from "./schema";
+import { LOGIN_SCHEMA, REGISTER_SCHEMA, GET_USER_BY_ID_SCHEMA } from "./schema";
 import {
   register,
   login,
   logout,
   getCurrentUser,
   getAllUsers,
+  getUserById,
 } from "./service";
 import { ZodTypeProvider } from "fastify-type-provider-zod";
 
@@ -78,6 +79,21 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
       const users = await getAllUsers(prisma);
       return reply.send({
         data: users,
+      });
+    },
+  });
+
+  fastify.withTypeProvider<ZodTypeProvider>().route({
+    method: "GET",
+    url: "/users/:id",
+    schema: {
+      params: GET_USER_BY_ID_SCHEMA,
+    },
+    handler: async (request, reply) => {
+      const { id } = request.params;
+      const user = await getUserById(id, prisma);
+      return reply.send({
+        data: user,
       });
     },
   });
