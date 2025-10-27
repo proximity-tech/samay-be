@@ -17,3 +17,7 @@ export const LOGIN_SCHEMA = z.object({
   email: z.email("Invalid email format"),
   password: z.string().min(1, "Password is required"),
 });
+
+export const GET_USER_BY_ID_SCHEMA = z.object({
+  id: z.string().min(1, "User ID is required"),
+});

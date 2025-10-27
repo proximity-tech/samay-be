@@ -62,3 +62,8 @@ export const ADD_PROJECT_SCHEMA = z.object({
   activityIds: z.array(z.string().min(1, "Activity ID is required")),
   projectId: z.number().min(1, "Project ID is required"),
 });
+
+export const USER_SELECT_DATA_QUERY_SCHEMA = z.object({
+  startDate: z.string(),
+  endDate: z.string(),
+});

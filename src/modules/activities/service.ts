@@ -1,4 +1,4 @@
-import { Activity, PrismaClient, Project } from "@prisma/client";
+import { Activity, PrismaClient, Project, Prisma } from "@prisma/client";
 import {
   ActivityResponse,
   CreateActivityInput,
@@ -420,4 +420,46 @@ export async function addActivitiesToProject(
       projectId,
     },
   });
+}
+
+/**
+ * Get user selected activities by user ID with optional date filtering
+ */
+export async function getUserSelectData(
+  userId: string,
+  query: {
+    startDate?: string;
+    endDate?: string;
+  },
+  prisma: PrismaClient
+): Promise<
+  Array<{
+    duration: number;
+    date: string;
+  }>
+> {
+  const { startDate, endDate } = query;
+
+  // Use raw SQL query to group by date(timestamp) and order by timestamp
+  const activities = await prisma.$queryRaw<
+    Array<{
+      duration: number;
+      date: string;
+    }>
+  >`
+    SELECT 
+      SUM(duration)::int as duration,
+      DATE(timestamp) as date
+    FROM activities 
+    WHERE 
+      "userId" = ${userId}
+      AND selected = true
+      AND app NOT IN (${Prisma.join(EXCLUDED_APPS)})
+      ${startDate ? Prisma.sql`AND timestamp >= ${startDate}` : Prisma.empty}
+      ${endDate ? Prisma.sql`AND timestamp <= ${endDate}` : Prisma.empty}
+    GROUP BY DATE(timestamp)
+    ORDER BY DATE(timestamp) DESC, SUM(duration) DESC
+  `;
+
+  return activities;
 }

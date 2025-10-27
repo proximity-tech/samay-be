@@ -8,6 +8,7 @@ import {
   TOP_ACTIVITIES_QUERY_SCHEMA,
   SELECT_ACTIVITIES_SCHEMA,
   ADD_PROJECT_SCHEMA,
+  USER_SELECT_DATA_QUERY_SCHEMA,
 } from "./schema";
 import {
   createActivity,
@@ -20,6 +21,7 @@ import {
   selectActivities,
   activitiesForSelection,
   addActivitiesToProject,
+  getUserSelectData,
 } from "./service";
 import z from "zod";
 
@@ -217,6 +219,32 @@ const activityRoutes: FastifyPluginAsync = async (fastify) => {
               : "Failed to add activities to project",
         });
       }
+    },
+  });
+
+  // Get user select data by user ID
+  fastify.withTypeProvider<ZodTypeProvider>().route({
+    method: "GET",
+    url: "/user-select/:userId",
+    schema: {
+      params: z.object({
+        userId: z.string().min(1, "User ID is required"),
+      }),
+      querystring: USER_SELECT_DATA_QUERY_SCHEMA,
+    },
+    handler: async (request, reply) => {
+      const { userId } = request.params;
+      const { startDate, endDate } = request.query;
+
+      const result = await getUserSelectData(
+        userId,
+        { startDate, endDate },
+        prisma
+      );
+
+      return reply.send({
+        data: result,
+      });
     },
   });
 };
