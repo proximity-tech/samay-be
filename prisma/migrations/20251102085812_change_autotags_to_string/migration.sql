@@ -1,0 +1,4 @@
+-- AlterTable
+ALTER TABLE "public"."activities" ALTER COLUMN "autoTags" DROP NOT NULL,
+ALTER COLUMN "autoTags" DROP DEFAULT,
+ALTER COLUMN "autoTags" SET DATA TYPE TEXT;

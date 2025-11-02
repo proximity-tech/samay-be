@@ -28,6 +28,7 @@ export interface TopActivityResponse {
   app: string;
   title: string;
   duration: number;
+  tag: string;
 }
 
 // User select data response interface

@@ -54,7 +54,7 @@ function sanitizeActivityData(
     app: sanitizedApp,
     url: sanitizeString(activity.url || ""),
     title: sanitizedTitle,
-    autoTags: tag ? [tag.tag] : [],
+    autoTags: tag ? tag.tag : "",
     isAutoTagged: tag ? true : false,
   };
 }
@@ -285,7 +285,7 @@ export async function getTopActivities(
   const { startDate, endDate } = query;
 
   const topActivities = await prisma.activity.groupBy({
-    by: ["app", "title"],
+    by: ["app", "title", "autoTags"],
     where: {
       userId,
       timestamp: {
@@ -303,6 +303,7 @@ export async function getTopActivities(
     app: item.app,
     title: item.title,
     duration: item._sum?.duration || 0,
+    tag: item.autoTags || "",
   }));
 }
 
