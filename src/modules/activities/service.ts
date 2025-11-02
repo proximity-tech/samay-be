@@ -430,7 +430,7 @@ export async function activitiesForSelection(
       duration: {
         gte: 60,
       },
-      selected: selected ?? undefined,
+      selected,
     },
     include: {
       project: true,
