@@ -426,6 +426,9 @@ export async function activitiesForSelection(
         lte: endDate,
       },
       app: { notIn: EXCLUDED_APPS },
+      duration: {
+        gte: 60,
+      },
     },
     include: {
       project: true,
