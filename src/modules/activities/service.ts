@@ -405,7 +405,8 @@ export async function activitiesForSelection(
   userId: string,
   prisma: PrismaClient,
   startDate: string,
-  endDate: string
+  endDate: string,
+  selected?: boolean,
 ): Promise<
   Array<{
     userId: string;
@@ -429,6 +430,7 @@ export async function activitiesForSelection(
       duration: {
         gte: 60,
       },
+      selected,
     },
     include: {
       project: true,
