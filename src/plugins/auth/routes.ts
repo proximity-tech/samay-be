@@ -23,6 +23,7 @@ export const adminRoutes: Record<string, Record<string, boolean>> = {
   },
   GET: {
     "/users/:id": true,
+    "/activities/user-select/:id": true,
   },
   PUT: {
     "/users/:id": true,
