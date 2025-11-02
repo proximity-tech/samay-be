@@ -1,12 +1,16 @@
-import { Activity, PrismaClient, Project, Prisma } from "@prisma/client";
+import { Activity, PrismaClient, Project, Prisma, Tag } from "@prisma/client";
 import {
   ActivityResponse,
   CreateActivityInput,
   UpdateActivityInput,
   TopActivityResponse,
 } from "./types";
+import NodeCache from "node-cache";
 
 const EXCLUDED_APPS = ["loginwindow", "dock"];
+
+// Initialize cache with a TTL of 1 hour (3600 seconds)
+const cache = new NodeCache({ stdTTL: 300 });
 
 /**
  * Sanitize string data by removing null bytes and other invalid UTF-8 characters
@@ -29,16 +33,29 @@ function sanitizeString(str: string): string {
 /**
  * Sanitize activity data to prevent database insertion errors
  */
-function sanitizeActivityData(activity: {
-  app?: string;
-  url?: string;
-  title?: string;
-}) {
+function sanitizeActivityData(
+  activity: {
+    app?: string;
+    url?: string;
+    title?: string;
+  },
+  tags: Tag[]
+) {
+  const sanitizedApp = sanitizeString(activity.app || "");
+  const sanitizedTitle = sanitizeString(activity.title || "");
+  const tag = tags.find(
+    (t) =>
+      t.app === sanitizedApp &&
+      (t.title === "any" || t.title === sanitizedTitle)
+  );
+
   return {
     ...activity,
-    app: sanitizeString(activity.app || ""),
+    app: sanitizedApp,
     url: sanitizeString(activity.url || ""),
-    title: sanitizeString(activity.title || ""),
+    title: sanitizedTitle,
+    autoTags: tag ? [tag.tag] : [],
+    isAutoTagged: tag ? true : false,
   };
 }
 
@@ -50,10 +67,13 @@ export async function createActivity(
   userId: string,
   prisma: PrismaClient
 ) {
+  const tags = await getTags(prisma);
+
   const mappedActivities = activities
     .map((activity) => {
       const { data, timestamp, duration } = activity;
-      const sanitizedData = sanitizeActivityData(data);
+      const sanitizedData = sanitizeActivityData(data, tags);
+      console.log(sanitizedData);
       return {
         ...sanitizedData,
         timestamp,
@@ -70,6 +90,31 @@ export async function createActivity(
   });
 
   return;
+}
+
+/**
+ * Get all tags from the database with caching
+ * First checks cache, if not present fetches from DB and stores in cache
+ */
+export async function getTags(prisma: PrismaClient): Promise<Tag[]> {
+  const cacheKey = "tags";
+
+  // Check cache first
+  const cachedTags = cache.get<Tag[]>(cacheKey);
+
+  if (cachedTags) {
+    return cachedTags;
+  }
+
+  // If not in cache, fetch from database
+  const tags = await prisma.tag.findMany({
+    orderBy: { createdAt: "desc" },
+  });
+
+  // Store in cache
+  cache.set(cacheKey, tags);
+
+  return tags;
 }
 
 /**
@@ -109,7 +154,8 @@ export async function updateActivity(
   prisma: PrismaClient
 ): Promise<ActivityResponse> {
   const { data = {}, timestamp, duration, description } = input;
-  const sanitizedData = data ? sanitizeActivityData(data) : {};
+  const tags = await getTags(prisma);
+  const sanitizedData = data ? sanitizeActivityData(data, tags) : {};
   const activity = await prisma.activity.update({
     where: { id, userId },
     data: {

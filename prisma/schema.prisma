@@ -51,7 +51,8 @@ model Activity {
   projectId   Int?
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   project     Project? @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  
+  autoTags    String[] @default([])
+  isAutoTagged Boolean @default(false)
   @@map("activities")
 }
 
@@ -79,7 +80,19 @@ model ProjectUser {
   @@map("project_users")
 }
 
+
+model Tag {
+  id          Int           @id @default(autoincrement())
+  app        String
+  title String
+  tag     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@map("tags")
+}
+
 enum Role {
   USER
   ADMIN
 }
+
