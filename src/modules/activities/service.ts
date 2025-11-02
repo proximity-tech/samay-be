@@ -354,6 +354,7 @@ export function groupActivitiesByEntity(
       duration: number;
       projectId: number | null;
       projectName: string | null;
+      tag: string;
     }
   > = {};
 
@@ -367,6 +368,7 @@ export function groupActivitiesByEntity(
       id = "",
       projectId = null,
       project,
+      autoTags = "",
     } = activity;
 
     if (!userId || !app || !title || !id) {
@@ -390,6 +392,7 @@ export function groupActivitiesByEntity(
         duration: duration || 0,
         projectId,
         projectName: project?.name || "",
+        tag: autoTags || "",
       };
     }
   });
