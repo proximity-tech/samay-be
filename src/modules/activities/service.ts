@@ -479,12 +479,16 @@ export async function getUserSelectData(
     endDate?: string;
   },
   prisma: PrismaClient
-): Promise<
-  Array<{
+): Promise<{
+  activities: Array<{
     duration: number;
     date: string;
-  }>
-> {
+  }>;
+  activitiesByTag: Array<{
+    tag: string;
+    duration: number;
+  }>;
+}> {
   const { startDate, endDate } = query;
 
   // Use raw SQL query to group by date(timestamp) and order by timestamp
@@ -508,5 +512,25 @@ export async function getUserSelectData(
     ORDER BY DATE(timestamp) DESC, SUM(duration) DESC
   `;
 
-  return activities;
+  const activitiesByTagResult = await prisma.activity.groupBy({
+    by: ["autoTags"],
+    where: {
+      userId,
+      selected: true,
+      app: { notIn: EXCLUDED_APPS },
+      timestamp: {
+        gte: startDate,
+        lte: endDate,
+      },
+    },
+    _sum: { duration: true },
+    orderBy: { _sum: { duration: "desc" } },
+  });
+
+  const activitiesByTag = activitiesByTagResult.map((item) => ({
+    tag: item.autoTags || "",
+    duration: item._sum.duration || 0,
+  }));
+
+  return { activities, activitiesByTag };
 }
