@@ -36,7 +36,7 @@ const authMiddleware: FastifyPluginAsync = fp(async (fastify) => {
     };
 
     // Check admin routes access
-    if (payload.role != "ADMIN") {
+    if (payload.role !== "ADMIN") {
       if (isAdminRoute(method, url)) {
         throw new AuthorizationError();
       }

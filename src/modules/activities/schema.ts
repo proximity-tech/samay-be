@@ -42,6 +42,15 @@ export const ACTIVITY_ID_PARAM_SCHEMA = z.object({
 export const ACTIVITIES_QUERY_SCHEMA = z.object({
   startDate: z.string().optional(),
   endDate: z.string().optional(),
+  selected: z.string().transform((value) => {
+    if (value === "true") {
+      return true;
+    } else if (value === "false") {
+      return false;
+    } else {
+      return undefined;
+    }
+  }).optional(),
 });
 
 export const STATS_BY_DAY_QUERY_SCHEMA = z.object({
