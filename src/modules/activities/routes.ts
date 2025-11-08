@@ -222,6 +222,26 @@ const activityRoutes: FastifyPluginAsync = async (fastify) => {
     },
   });
 
+  fastify.withTypeProvider<ZodTypeProvider>().route({
+    method: "GET",
+    url: "/user-select",
+    schema: {
+      querystring: USER_SELECT_DATA_QUERY_SCHEMA,
+    },
+    handler: async (request, reply) => {
+      const { userId = "" } = request.user || {};
+      const { startDate, endDate } = request.query;
+
+      const result = await getUserSelectData(
+        userId,
+        { startDate, endDate },
+        prisma
+      );
+
+      return reply.send({ data: result });
+    },
+  });
+
   // Get user select data by user ID
   fastify.withTypeProvider<ZodTypeProvider>().route({
     method: "GET",
