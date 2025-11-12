@@ -37,14 +37,10 @@ export const createTaggingJob = (fastify: FastifyInstance) => {
       console.log("Starting tagging task");
 
       try {
-        const activities = await fastify.prisma.activity.findMany({
+        const activities = await fastify.prisma.activity.groupBy({
+          by: ["app", "title", "url"],
           where: {
             isAutoTagged: false,
-          },
-          select: {
-            app: true,
-            title: true,
-            url: true,
           },
         });
 
