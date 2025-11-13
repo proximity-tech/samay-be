@@ -15,6 +15,7 @@ import authRoutes from "./modules/auth/routes";
 import activityRoutes from "./modules/activities/routes";
 // import { createEventsMergeJob } from "./plugins/cron/events-merge";
 import projectRoutes from "./modules/projects/routes";
+import { createTaggingJob } from "./plugins/cron/tagging";
 const app = Fastify({
   logger: true,
 });
@@ -85,4 +86,6 @@ app.ready().then(() => {
   console.log("App is ready");
   // const eventsMergeJob = createEventsMergeJob(app);
   // app.scheduler.addCronJob(eventsMergeJob);
+  const taggingJob = createTaggingJob(app);
+  app.scheduler.addCronJob(taggingJob);
 });
