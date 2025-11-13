@@ -189,16 +189,16 @@ async function processBatch(
 }
 
 /**
- * Process all activities in batches
+ * Process all activities in batches and save tags after each batch
  */
 async function processAllBatches(
-  activities: ActivityGroup[]
-): Promise<TagData[]> {
+  activities: ActivityGroup[],
+  prisma: PrismaClient
+): Promise<void> {
   if (activities.length === 0) {
-    return [];
+    return;
   }
 
-  const allTags: TagData[] = [];
   const totalBatches = Math.ceil(activities.length / BATCH_SIZE);
 
   for (let i = 0; i < activities.length; i += BATCH_SIZE) {
@@ -207,16 +207,22 @@ async function processAllBatches(
 
     try {
       const batchTags = await processBatch(batch, batchNumber, totalBatches);
-      allTags.push(...batchTags);
-    } catch {
+
+      // Save tags and update activities after each batch
+      if (batchTags.length > 0) {
+        await saveTagsAndUpdateActivities(prisma, batchTags);
+        console.log(
+          `Completed batch ${batchNumber}: saved tags and updated activities`
+        );
+      }
+    } catch (error) {
       console.error(
-        `Failed to process batch ${batchNumber}, continuing with next batch...`
+        `Failed to process batch ${batchNumber}, continuing with next batch...`,
+        error
       );
       // Continue processing other batches even if one fails
     }
   }
-
-  return allTags;
 }
 
 /**
@@ -297,11 +303,8 @@ async function executeTaggingTask(fastify: FastifyInstance): Promise<void> {
       return;
     }
 
-    const allTags = await processAllBatches(newActivities);
-    console.log(`Total tags generated: ${allTags.length}`);
-
-    // Save tags and update activities in a single batch transaction
-    await saveTagsAndUpdateActivities(fastify.prisma, allTags);
+    // Process batches and save tags/update activities after each batch
+    await processAllBatches(newActivities, fastify.prisma);
     console.log("Tagging task completed successfully");
   } catch (error) {
     console.error("Error in tagging task:", error);
