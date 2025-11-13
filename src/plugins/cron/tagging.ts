@@ -3,11 +3,11 @@ import { FastifyInstance } from "fastify";
 import OpenAI from "openai";
 import { zodResponseFormat } from "openai/helpers/zod";
 import { z } from "zod/v3";
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient, Prisma } from "@prisma/client";
 
 // Constants
 const BATCH_SIZE = 25;
-const CRON_EXPRESSION = "*/30 * * * *";
+const CRON_EXPRESSION = "0 */6 * * *";
 const OPENAI_MODEL = "gpt-4o-mini";
 
 const TAG_OPTIONS = [
@@ -220,6 +220,48 @@ async function processAllBatches(
 }
 
 /**
+ * Update untagged activities with matching tags
+ */
+async function updateUntaggedActivities(
+  prisma: PrismaClient,
+  tags: TagData[]
+): Promise<void> {
+  if (tags.length === 0) {
+    return;
+  }
+
+  let totalUpdated = 0;
+
+  for (const tagData of tags) {
+    // Build where condition for activities
+    const whereCondition: Prisma.ActivityWhereInput = {
+      app: tagData.app,
+      OR: [{ isAutoTagged: false }, { autoTags: null }, { autoTags: "" }],
+    };
+
+    // If title is "any", match all activities with that app
+    // Otherwise, match activities with the exact title
+    if (tagData.title !== "any") {
+      whereCondition.title = tagData.title;
+    }
+
+    const result = await prisma.activity.updateMany({
+      where: whereCondition,
+      data: {
+        autoTags: tagData.tag,
+        isAutoTagged: true,
+      },
+    });
+
+    totalUpdated += result.count;
+  }
+
+  if (totalUpdated > 0) {
+    console.log(`Updated ${totalUpdated} untagged activities with tags`);
+  }
+}
+
+/**
  * Save tags to database
  */
 async function saveTags(prisma: PrismaClient, tags: TagData[]): Promise<void> {
@@ -233,6 +275,9 @@ async function saveTags(prisma: PrismaClient, tags: TagData[]): Promise<void> {
   });
 
   console.log(`Saved ${tags.length} tags to database`);
+
+  // Update all untagged activities that match the saved tags
+  await updateUntaggedActivities(prisma, tags);
 }
 
 /**
