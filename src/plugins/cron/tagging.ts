@@ -220,17 +220,27 @@ async function processAllBatches(
 }
 
 /**
- * Update untagged activities with matching tags
+ * Save tags and update activities in a single batch
  */
-async function updateUntaggedActivities(
+async function saveTagsAndUpdateActivities(
   prisma: PrismaClient,
   tags: TagData[]
 ): Promise<void> {
   if (tags.length === 0) {
+    console.log("No tags to save");
     return;
   }
 
-  let totalUpdated = 0;
+  // Step 1: Save all tags to database in a single batch
+  await prisma.tag.createMany({
+    data: tags,
+    skipDuplicates: true, // Skip if tag already exists
+  });
+
+  console.log(`Saved ${tags.length} tags to database`);
+
+  // Step 2: Update all matching activities in parallel batches
+  const updatePromises: Promise<{ count: number }>[] = [];
 
   for (const tagData of tags) {
     // Build where condition for activities
@@ -245,39 +255,28 @@ async function updateUntaggedActivities(
       whereCondition.title = tagData.title;
     }
 
-    const result = await prisma.activity.updateMany({
-      where: whereCondition,
-      data: {
-        autoTags: tagData.tag,
-        isAutoTagged: true,
-      },
-    });
-
-    totalUpdated += result.count;
+    // Add update operation to batch
+    updatePromises.push(
+      prisma.activity.updateMany({
+        where: whereCondition,
+        data: {
+          autoTags: tagData.tag,
+          isAutoTagged: true,
+        },
+      })
+    );
   }
+
+  // Execute all activity updates in parallel
+  const updateResults = await Promise.all(updatePromises);
+  const totalUpdated = updateResults.reduce(
+    (sum, result) => sum + result.count,
+    0
+  );
 
   if (totalUpdated > 0) {
     console.log(`Updated ${totalUpdated} untagged activities with tags`);
   }
-}
-
-/**
- * Save tags to database
- */
-async function saveTags(prisma: PrismaClient, tags: TagData[]): Promise<void> {
-  if (tags.length === 0) {
-    console.log("No tags to save");
-    return;
-  }
-
-  await prisma.tag.createMany({
-    data: tags,
-  });
-
-  console.log(`Saved ${tags.length} tags to database`);
-
-  // Update all untagged activities that match the saved tags
-  await updateUntaggedActivities(prisma, tags);
 }
 
 /**
@@ -301,7 +300,8 @@ async function executeTaggingTask(fastify: FastifyInstance): Promise<void> {
     const allTags = await processAllBatches(newActivities);
     console.log(`Total tags generated: ${allTags.length}`);
 
-    await saveTags(fastify.prisma, allTags);
+    // Save tags and update activities in a single batch transaction
+    await saveTagsAndUpdateActivities(fastify.prisma, allTags);
     console.log("Tagging task completed successfully");
   } catch (error) {
     console.error("Error in tagging task:", error);
