@@ -239,6 +239,7 @@ export async function getTopApps(
 ): Promise<{
   totalDuration: number;
   topApps: Array<{ app: string; duration: number }>;
+  topTags: Array<{ tag: string; duration: number }>;
 }> {
   // Create date range for the specific day
   const { startDate, endDate } = query;
@@ -254,19 +255,37 @@ export async function getTopApps(
       app: { notIn: EXCLUDED_APPS },
     },
     _sum: { duration: true },
-
+    take: 5,
     orderBy: { _sum: { duration: "desc" } },
   });
   const totalDuration = apps.reduce(
     (acc, item) => acc + (item._sum?.duration || 0),
     0
   );
+
+  const tags = await prisma.activity.groupBy({
+    by: ["autoTags"],
+    where: {
+      userId,
+      timestamp: {
+        gte: startDate,
+        lte: endDate,
+      },
+      app: { notIn: EXCLUDED_APPS },
+    },
+    _sum: { duration: true },
+    orderBy: { _sum: { duration: "desc" } },
+  });
   // Get aggregated data for the day
 
   return {
     totalDuration: totalDuration || 0,
     topApps: apps.map((item) => ({
       app: item.app,
+      duration: item._sum?.duration || 0,
+    })),
+    topTags: tags.map((item) => ({
+      tag: item.autoTags || "Other",
       duration: item._sum?.duration || 0,
     })),
   };
