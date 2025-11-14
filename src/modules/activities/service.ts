@@ -108,6 +108,7 @@ export async function getTags(prisma: PrismaClient): Promise<Tag[]> {
 
   // If not in cache, fetch from database
   const tags = await prisma.tag.findMany({
+    where: { title: "any" },
     orderBy: { createdAt: "desc" },
   });
 

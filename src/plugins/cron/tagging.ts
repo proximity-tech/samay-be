@@ -319,10 +319,5 @@ export const createTaggingJob = (fastify: FastifyInstance) => {
     console.error("Tagging task error:", err);
   });
 
-  // Execute immediately
-  taskFunction().catch((err: Error) => {
-    console.error("Error executing tagging task immediately:", err);
-  });
-
   return new CronJob({ cronExpression: CRON_EXPRESSION }, task);
 };
