@@ -123,11 +123,23 @@ export const createEventsMergeJob = (fastify: FastifyInstance) => {
 
       const { activities: result, allIds } = mergeActivities(activities);
       // create result activities in db with merged true and remove allids from db do these in transaction
+      // Process in batches to avoid issues with large datasets
+      const BATCH_SIZE = 1000;
+
       await fastify.prisma.$transaction(async (tx) => {
-        await tx.activity.createMany({
-          data: result,
-        });
-        await tx.activity.deleteMany({ where: { id: { in: allIds } } });
+        // Create activities in batches
+        for (let i = 0; i < result.length; i += BATCH_SIZE) {
+          const batch = result.slice(i, i + BATCH_SIZE);
+          await tx.activity.createMany({
+            data: batch,
+          });
+        }
+
+        // Delete activities in batches
+        for (let i = 0; i < allIds.length; i += BATCH_SIZE) {
+          const batch = allIds.slice(i, i + BATCH_SIZE);
+          await tx.activity.deleteMany({ where: { id: { in: batch } } });
+        }
       });
     } catch (error) {
       console.error("Error in events merge task:", error);
