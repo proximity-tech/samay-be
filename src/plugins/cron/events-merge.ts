@@ -14,7 +14,29 @@ interface AggregatedActivity {
   merged: boolean;
   projectId: number | null;
   mergedTimestamp: string;
+  autoTags: string;
+  isAutoTagged: boolean;
 }
+
+// Helper function to convert timestamp to IST date string (YYYY-MM-DD)
+const getISTDate = (timestamp: string): string => {
+  if (!timestamp) return "";
+  try {
+    const date = new Date(timestamp);
+    // Convert to IST (Asia/Kolkata timezone)
+    const istDateString = date.toLocaleString("en-US", {
+      timeZone: "Asia/Kolkata",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    });
+    // Format: MM/DD/YYYY -> YYYY-MM-DD
+    const [month, day, year] = istDateString.split("/");
+    return `${year}-${month}-${day}`;
+  } catch {
+    return "";
+  }
+};
 
 const mergeActivities = (
   activities: Partial<Activity>[]
@@ -33,13 +55,16 @@ const mergeActivities = (
       timestamp = "",
       url = "",
       projectId = null,
+      autoTags = "",
+      isAutoTagged = false,
     } = activity;
 
     if (!userId || !app || !title) {
       return { activities: [], allIds: [] };
     }
 
-    const key = `${userId}|${app}|${title}|${selected}`;
+    const istDate = getISTDate(timestamp);
+    const key = `${userId}|${app}|${title}|${selected}|${istDate}`;
     allIds.push(id);
 
     const mergedTimestamp =
@@ -65,6 +90,8 @@ const mergeActivities = (
         merged: true,
         projectId,
         mergedTimestamp: mergedTimestamp || "",
+        autoTags: autoTags || "",
+        isAutoTagged,
       };
     }
   });
@@ -74,45 +101,52 @@ const mergeActivities = (
 };
 
 export const createEventsMergeJob = (fastify: FastifyInstance) => {
+  const taskFunction = async () => {
+    console.log("Starting events merge task");
+
+    try {
+      const activities = await fastify.prisma.activity.findMany({
+        where: {
+          merged: false,
+        },
+        select: {
+          id: true,
+          userId: true,
+          app: true,
+          title: true,
+          selected: true,
+          timestamp: true,
+          duration: true,
+          projectId: true,
+        },
+      });
+
+      const { activities: result, allIds } = mergeActivities(activities);
+      // create result activities in db with merged true and remove allids from db do these in transaction
+      await fastify.prisma.$transaction(async (tx) => {
+        await tx.activity.createMany({
+          data: result,
+        });
+        await tx.activity.deleteMany({ where: { id: { in: allIds } } });
+      });
+    } catch (error) {
+      console.error("Error in events merge task:", error);
+      throw error;
+    }
+  };
+
   const task = new AsyncTask(
     "events merge task",
-    async () => {
-      console.log("Starting events merge task");
-
-      try {
-        const activities = await fastify.prisma.activity.findMany({
-          where: {
-            merged: false,
-          },
-          select: {
-            id: true,
-            userId: true,
-            app: true,
-            title: true,
-            selected: true,
-            timestamp: true,
-            duration: true,
-            projectId: true,
-          },
-        });
-
-        const { activities: result, allIds } = mergeActivities(activities);
-        // create result activities in db with merged true and remove allids from db do these in transaction
-        await fastify.prisma.$transaction(async (tx) => {
-          await tx.activity.createMany({
-            data: result,
-          });
-          await tx.activity.deleteMany({ where: { id: { in: allIds } } });
-        });
-      } catch (error) {
-        console.error("Error in events merge task:", error);
-        throw error;
-      }
-    },
+    taskFunction,
     (err: Error) => {
       console.error("Events merge task error:", err);
     }
   );
 
-  return new CronJob({ cronExpression: "0 2 * * *" }, task);
+  // Execute immediately after starting
+  taskFunction().catch((err) => {
+    console.error("Error executing initial events merge task:", err);
+  });
+
+  return new CronJob({ cronExpression: "0 0 * * *" }, task);
 };
