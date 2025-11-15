@@ -13,7 +13,7 @@ import errorHandlerPlugin from "./plugins/error/plugin";
 import authMiddleware from "./plugins/auth/auth";
 import authRoutes from "./modules/auth/routes";
 import activityRoutes from "./modules/activities/routes";
-import { createEventsMergeJob } from "./plugins/cron/events-merge";
+// import { createEventsMergeJob } from "./plugins/cron/events-merge";
 import projectRoutes from "./modules/projects/routes";
 import { createTaggingJob } from "./plugins/cron/tagging";
 const app = Fastify({
@@ -84,8 +84,8 @@ app.listen({ port: parseInt(process.env.PORT || "3000") }, (err) => {
 
 app.ready().then(() => {
   console.log("App is ready");
-  const eventsMergeJob = createEventsMergeJob(app);
-  app.scheduler.addCronJob(eventsMergeJob);
+  // const eventsMergeJob = createEventsMergeJob(app);
+  // app.scheduler.addCronJob(eventsMergeJob);
   const taggingJob = createTaggingJob(app);
   app.scheduler.addCronJob(taggingJob);
 });
