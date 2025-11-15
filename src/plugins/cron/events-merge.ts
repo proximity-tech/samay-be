@@ -77,6 +77,9 @@ const mergeActivities = (
       groupedData[key].mergedTimestamp += mergedTimestamp
         ? `,${mergedTimestamp}`
         : "";
+      groupedData[key].autoTags = groupedData[key].autoTags || autoTags || "";
+      groupedData[key].isAutoTagged =
+        groupedData[key].isAutoTagged || isAutoTagged || false;
     } else {
       // Create new group
       groupedData[key] = {
@@ -118,6 +121,8 @@ export const createEventsMergeJob = (fastify: FastifyInstance) => {
           timestamp: true,
           duration: true,
           projectId: true,
+          autoTags: true,
+          isAutoTagged: true,
         },
       });
 
