@@ -167,10 +167,5 @@ export const createEventsMergeJob = (fastify: FastifyInstance) => {
     }
   );
 
-  // Execute immediately after starting
-  taskFunction().catch((err) => {
-    console.error("Error executing initial events merge task:", err);
-  });
-
   return new CronJob({ cronExpression: "0 0 * * *" }, task);
 };
