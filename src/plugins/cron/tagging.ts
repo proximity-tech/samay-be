@@ -7,7 +7,7 @@ import { PrismaClient, Prisma } from "@prisma/client";
 
 // Constants
 const BATCH_SIZE = 25;
-const CRON_EXPRESSION = "0 */6 * * *";
+const CRON_EXPRESSION = "*/30 * * * *";
 const OPENAI_MODEL = "gpt-4o-mini";
 
 const TAG_OPTIONS = [
@@ -90,16 +90,12 @@ async function filterNewActivities(
       app: {
         in: activities.map((activity) => activity.app),
       },
+      title: "any",
     },
   });
 
   return activities.filter(
-    (activity) =>
-      !existingTags.some(
-        (tag) =>
-          tag.app === activity.app &&
-          (tag.title === activity.title || tag.title === "any")
-      )
+    (activity) => !existingTags.some((tag) => tag.app === activity.app)
   );
 }
 
