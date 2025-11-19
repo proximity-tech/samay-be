@@ -418,7 +418,9 @@ export function groupActivitiesByEntity(
   });
 
   // Convert grouped data to array and sort by duration (descending)
-  return Object.values(groupedData).sort((a, b) => b.duration - a.duration);
+  return Object.values(groupedData)
+    .sort((a, b) => b.duration - a.duration)
+    .filter((item) => item.duration > 60);
 }
 
 export async function activitiesForSelection(
@@ -446,9 +448,6 @@ export async function activitiesForSelection(
         lte: endDate,
       },
       app: { notIn: EXCLUDED_APPS },
-      duration: {
-        gte: 60,
-      },
     },
     include: {
       project: true,
