@@ -15,7 +15,9 @@ import authRoutes from "./modules/auth/routes";
 import activityRoutes from "./modules/activities/routes";
 import { createEventsMergeJob } from "./plugins/cron/events-merge";
 import projectRoutes from "./modules/projects/routes";
+import insightRoutes from "./modules/insights/routes";
 import { createTaggingJob } from "./plugins/cron/tagging";
+import { createDailyInsightsJob } from "./plugins/cron/daily-insights";
 const app = Fastify({
   logger: true,
 });
@@ -66,6 +68,7 @@ app.register(authMiddleware);
 app.register(authRoutes, { prefix: "/auth" });
 app.register(activityRoutes, { prefix: "/activities" });
 app.register(projectRoutes, { prefix: "/projects" });
+app.register(insightRoutes, { prefix: "/insights" });
 
 app.get("/", async function handler() {
   return "Tick Tick Track your activity without fuss";
@@ -88,4 +91,6 @@ app.ready().then(() => {
   app.scheduler.addCronJob(eventsMergeJob);
   const taggingJob = createTaggingJob(app);
   app.scheduler.addCronJob(taggingJob);
+  const dailyInsightsJob = createDailyInsightsJob(app);
+  app.scheduler.addCronJob(dailyInsightsJob);
 });
