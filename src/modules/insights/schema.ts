@@ -6,9 +6,11 @@ export const getDailyInsightSchema = {
   }),
   response: {
     200: z.object({
-      dailyInsights: z.array(z.string()),
-      improvementPlan: z.array(z.string()),
-      date: z.string(),
+      data: z.object({
+        dailyInsights: z.array(z.string()),
+        improvementPlan: z.array(z.string()),
+        date: z.string(),
+      }),
     }),
     404: z.object({
       message: z.string(),

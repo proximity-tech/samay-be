@@ -19,11 +19,11 @@ export default async function insightRoutes(fastify: FastifyInstance) {
         return reply.status(404).send({ message: "No insights found for this date" });
       }
 
-      return {
+      return {data:{
         dailyInsights: insight.dailyInsights,
         improvementPlan: insight.improvementPlan,
         date: insight.date.toISOString(),
-      };
+      }};
     }
   );
 }
