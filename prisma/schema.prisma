@@ -13,14 +13,26 @@ model User {
   password     String
   name         String
   role         Role          @default(USER)
+  isVerified   Boolean       @default(false)
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
   activities   Activity[]
   projectUsers ProjectUser[]
   sessions     Session[]
   dailyInsights DailyInsight[]
+  emailVerifications EmailVerification[]
 
   @@map("users")
+}
+
+model EmailVerification {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@map("email_verifications")
 }
 
 model DailyInsight {

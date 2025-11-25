@@ -1,8 +1,10 @@
 import { PrismaClient, User } from "@prisma/client";
 import * as argon2 from "argon2";
 import jwt from "jsonwebtoken";
+import { v4 as uuidv4 } from "uuid";
 import { AuthResponse, LoginInput, RegisterInput, UserResponse } from "./types";
 import { AppError } from "../../plugins/error/plugin";
+import { sendVerificationEmail } from "../email/service";
 
 const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key";
 const JWT_EXPIRES_IN = "7d";
@@ -40,6 +42,17 @@ export async function register(
       name,
     },
   });
+
+  // Create verification record
+  const verification = await prisma.emailVerification.create({
+    data: {
+      userId: user.id,
+      expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours
+    },
+  });
+
+  // Send verification email
+  await sendVerificationEmail(email, user.id, verification.id);
 
   // Generate JWT token
   const token = generateToken(user);
@@ -267,4 +280,75 @@ async function createSession(
       expiresAt,
     },
   });
+}
+/**
+ * Verify email address
+ */
+export async function verifyEmail(
+  userId: string,
+  token: string,
+  prisma: PrismaClient
+): Promise<void> {
+  const verification = await prisma.emailVerification.findUnique({
+    where: { id: token },
+  });
+
+  if (!verification) {
+    throw new AppError("Invalid verification token", 400, "INVALID_TOKEN");
+  }
+
+  if (verification.userId !== userId) {
+    throw new AppError("Invalid verification token", 400, "INVALID_TOKEN");
+  }
+
+  if (verification.expiresAt < new Date()) {
+    throw new AppError("Verification token expired", 400, "TOKEN_EXPIRED");
+  }
+
+  await prisma.user.update({
+    where: { id: userId },
+    data: {
+      isVerified: true,
+    },
+  });
+
+  // Delete verification record
+  await prisma.emailVerification.delete({
+    where: { id: token },
+  });
+}
+
+/**
+ * Resend verification email
+ */
+export async function resendVerificationEmail(
+  email: string,
+  prisma: PrismaClient
+): Promise<void> {
+  const user = await prisma.user.findUnique({
+    where: { email },
+  });
+
+  if (!user) {
+    throw new AppError("User not found", 404, "USER_NOT_FOUND");
+  }
+
+  if (user.isVerified) {
+    throw new AppError("Email already verified", 400, "ALREADY_VERIFIED");
+  }
+
+  // Delete existing verifications
+  await prisma.emailVerification.deleteMany({
+    where: { userId: user.id },
+  });
+
+  // Create new verification
+  const verification = await prisma.emailVerification.create({
+    data: {
+      userId: user.id,
+      expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours
+    },
+  });
+
+  await sendVerificationEmail(email, user.id, verification.id);
 }

@@ -21,3 +21,12 @@ export const LOGIN_SCHEMA = z.object({
 export const GET_USER_BY_ID_SCHEMA = z.object({
   id: z.string().min(1, "User ID is required"),
 });
+
+export const VERIFY_EMAIL_SCHEMA = z.object({
+  token: z.string().min(1, "Verification token is required"),
+  userId: z.string().min(1, "User ID is required"),
+});
+
+export const RESEND_VERIFICATION_EMAIL_SCHEMA = z.object({
+  email: z.email("Invalid email format"),
+});

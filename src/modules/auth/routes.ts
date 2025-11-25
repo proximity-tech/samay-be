@@ -1,5 +1,5 @@
 import { FastifyPluginAsync } from "fastify";
-import { LOGIN_SCHEMA, REGISTER_SCHEMA, GET_USER_BY_ID_SCHEMA } from "./schema";
+import { LOGIN_SCHEMA, REGISTER_SCHEMA, GET_USER_BY_ID_SCHEMA, VERIFY_EMAIL_SCHEMA, RESEND_VERIFICATION_EMAIL_SCHEMA } from "./schema";
 import {
   register,
   login,
@@ -7,6 +7,8 @@ import {
   getCurrentUser,
   getAllUsers,
   getUserById,
+  verifyEmail,
+  resendVerificationEmail,
 } from "./service";
 import { ZodTypeProvider } from "fastify-type-provider-zod";
 
@@ -94,6 +96,36 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
       const user = await getUserById(id, prisma);
       return reply.send({
         data: user,
+      });
+    },
+  });
+
+  fastify.withTypeProvider<ZodTypeProvider>().route({
+    method: "GET",
+    url: "/verify-email",
+    schema: {
+      querystring: VERIFY_EMAIL_SCHEMA,
+    },
+    handler: async (request, reply) => {
+      const { token, userId } = request.query;
+      await verifyEmail(userId, token, prisma);
+      return reply.send({
+        message: "Email verified successfully",
+      });
+    },
+  });
+
+  fastify.withTypeProvider<ZodTypeProvider>().route({
+    method: "POST",
+    url: "/resend-verification-email",
+    schema: {
+      body: RESEND_VERIFICATION_EMAIL_SCHEMA,
+    },
+    handler: async (request, reply) => {
+      const { email } = request.body;
+      await resendVerificationEmail(email, prisma);
+      return reply.send({
+        message: "Verification email sent successfully",
       });
     },
   });
