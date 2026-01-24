@@ -7,12 +7,75 @@ import {
 } from "./types";
 import { randomUUID } from "crypto";
 import argon2 from "argon2";
+import { EmailService } from "../../services/email";
+
+/**
+ * Send invitation email to the invited user
+ */
+export async function sendInvitationEmail(
+  emailService: EmailService,
+  invitation: InvitationResponse & {
+    workspace?: { name: string } | null;
+    inviter: { name: string | null; email: string };
+  },
+  token: string,
+  role: string
+): Promise<void> {
+  const baseUrl = process.env.APP_URL || "http://localhost:3000";
+  const invitationLink = `${baseUrl}/accept-invite?token=${token}`;
+  const inviterName = invitation.inviter.name || invitation.inviter.email;
+  const workspaceName = invitation.workspace?.name || "a workspace";
+
+  try {
+    await emailService.sendEmail({
+      to: invitation.email,
+      subject: `You've been invited to join ${workspaceName}`,
+      htmlBody: `
+        <html>
+          <body>
+            <h2>You've been invited!</h2>
+            <p>Hi there,</p>
+            <p><strong>${inviterName}</strong> has invited you to join <strong>${workspaceName}</strong> as a <strong>${role}</strong>.</p>
+            <p>Click the link below to accept the invitation:</p>
+            <p><a href="${invitationLink}" style="background-color: #4CAF50; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">Accept Invitation</a></p>
+            <p>Or copy and paste this link into your browser:</p>
+            <p>${invitationLink}</p>
+            <p>This invitation will expire in 7 days.</p>
+            <p>If you didn't expect this invitation, you can safely ignore this email.</p>
+          </body>
+        </html>
+      `,
+      textBody: `
+You've been invited!
+
+Hi there,
+
+${inviterName} has invited you to join ${workspaceName} as a ${role}.
+
+Accept the invitation by clicking this link:
+${invitationLink}
+
+This invitation will expire in 7 days.
+
+If you didn't expect this invitation, you can safely ignore this email.
+      `,
+      tag: "invitation",
+    });
+  } catch (error) {
+    // Log error but don't fail the invitation creation
+    console.error("Failed to send invitation email:", error);
+    // Still log the invitation link for development/debugging
+    console.log(`Invitation link: ${invitationLink}`);
+    throw error; // Re-throw to allow caller to handle if needed
+  }
+}
 
 /**
  * Create a new invitation
  */
 export async function createInvitation(
   prisma: PrismaClient,
+  emailService: EmailService,
   input: CreateInvitationInput,
   inviterId: string,
   workspaceId: string
@@ -73,6 +136,11 @@ export async function createInvitation(
             email: true,
           },
         },
+        workspace: {
+          select: {
+            name: true,
+          },
+        },
       },
     })
     .catch((e) => {
@@ -82,10 +150,13 @@ export async function createInvitation(
       throw e;
     });
 
-  // TODO: Send email
-  // TODO: Send email
-  const baseUrl = process.env.APP_URL || "http://localhost:3000";
-  console.log(`Invitation link: ${baseUrl}/accept-invite?token=${token}`);
+  // Send invitation email
+  try {
+    await sendInvitationEmail(emailService, invitation, token, role);
+  } catch (error) {
+    // Log error but don't fail the invitation creation
+    // The sendInvitationEmail function already logs the error and invitation link
+  }
 
   return invitation;
 }

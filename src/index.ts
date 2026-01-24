@@ -3,6 +3,7 @@ import fastifySwagger from "@fastify/swagger";
 import cors from "@fastify/cors";
 import fastifySwaggerUI from "@fastify/swagger-ui";
 import fastifySchedule from "@fastify/schedule";
+import fastifyRateLimit from "@fastify/rate-limit";
 import {
   jsonSchemaTransform,
   serializerCompiler,
@@ -10,6 +11,7 @@ import {
 } from "fastify-type-provider-zod";
 import prismaPlugin from "./plugins/prisma-plugin";
 import errorHandlerPlugin from "./plugins/error/plugin";
+import emailPlugin from "./plugins/email-plugin";
 import authMiddleware from "./plugins/auth/auth";
 import authRoutes from "./modules/auth/routes";
 import activityRoutes from "./modules/activities/routes";
@@ -30,8 +32,26 @@ app.register(cors, {
   allowedHeaders: ["Content-Type", "Authorization"],
 });
 
+// Register rate limiting
+app.register(fastifyRateLimit, {
+  max: parseInt(process.env.RATE_LIMIT_MAX || "100"), // Maximum number of requests
+  timeWindow: process.env.RATE_LIMIT_TIME_WINDOW || "1 minute", // Time window
+  skipOnError: false, // Continue even if rate limit check fails
+  addHeaders: {
+    "x-ratelimit-limit": true,
+    "x-ratelimit-remaining": true,
+    "x-ratelimit-reset": true,
+  },
+  // Allow health check and root route to bypass rate limiting
+  allowList: (req) => {
+    const url = req.url || "";
+    return url === "/health" || url === "/" || url.startsWith("/docs");
+  },
+});
+
 app.register(prismaPlugin);
 app.register(errorHandlerPlugin);
+app.register(emailPlugin);
 app.register(fastifySchedule);
 app.setValidatorCompiler(validatorCompiler);
 app.setSerializerCompiler(serializerCompiler);

@@ -15,6 +15,7 @@ import z from "zod";
 
 const invitationRoutes: FastifyPluginAsync = async (fastify) => {
   const prisma = fastify.prisma;
+  const emailService = fastify.emailService;
 
   // Create invitation
   fastify.withTypeProvider<ZodTypeProvider>().route({
@@ -27,7 +28,7 @@ const invitationRoutes: FastifyPluginAsync = async (fastify) => {
       const { userId = "", workspaceId = "" } = request.user || {};
 
       const input = request.body;
-      const result = await createInvitation(prisma, input, userId, workspaceId);
+      const result = await createInvitation(prisma, emailService, input, userId, workspaceId);
 
       return reply.status(201).send({
         data: result,
