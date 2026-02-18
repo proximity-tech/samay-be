@@ -1,8 +1,11 @@
 import { PrismaClient, User, Role } from "@prisma/client";
 import * as argon2 from "argon2";
-import { randomUUID } from "crypto";
+import { randomUUID, randomBytes } from "node:crypto";
 import jwt from "jsonwebtoken";
-import {
+import { AppError } from "../../plugins/error/plugin";
+import { sendVerificationEmail as sendEmail } from "../../services/email-service";
+
+import type {
   AuthResponse,
   LoginInput,
   RegisterInput,
@@ -10,10 +13,11 @@ import {
   SwitchWorkspaceInput,
   MakeProfileDefaultInput,
 } from "./types";
-import { AppError } from "../../plugins/error/plugin";
 
 const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key";
 const JWT_EXPIRES_IN = "7d";
+const EMAIL_VERIFICATION_TOKEN_EXPIRY =
+  parseInt(process.env.EMAIL_VERIFICATION_TOKEN_EXPIRY || "24", 10) * 60 * 60 * 1000; // Convert hours to milliseconds
 
 /**
  * Register a new user
@@ -78,11 +82,12 @@ export async function register(
   const userWithProfile = {
     userId: user.id,
     email: user.email,
-    name: name, // Return the name provided during registration
+    name: user.name,
+    emailVerified: user.emailVerified,
     createdAt: user.createdAt,
     profileId: profile.id,
     workspaceId: workspace.id,
-    role: profile.role,
+    role: profile.role as Role,
     workspaceName: workspace.name,
   };
 
@@ -90,6 +95,15 @@ export async function register(
   const token = generateToken(userWithProfile);
 
   // Session creation removed
+
+  // Send verification email
+  try {
+    const verificationToken = await generateVerificationToken(user.id, prisma);
+    await sendVerificationEmail(user.email, user.name, verificationToken);
+  } catch (error) {
+    // Log error but don't fail registration if email fails
+    console.error("Failed to send verification email:", error);
+  }
 
   return {
     user: userWithProfile,
@@ -125,7 +139,7 @@ export async function login(
   // Get user's profiles
   const {
     id: profileId,
-    workspaceId: workspaceId,
+    workspaceId,
     workspace: { name: workspaceName },
     role,
     name,
@@ -142,6 +156,8 @@ export async function login(
     workspaceId: workspaceId,
     role: role,
     workspaceName: workspaceName,
+    emailVerified: user.emailVerified,
+    createdAt: user.createdAt,
   };
 
   // Generate JWT token
@@ -206,6 +222,8 @@ export async function switchWorkspace(
     workspaceId: profile.workspaceId,
     role: profile.role,
     workspaceName: profile.workspace.name,
+    emailVerified: profile.user.emailVerified,
+    createdAt: profile.user.createdAt,
   };
 
   // Generate new token for the target workspace
@@ -265,6 +283,8 @@ export async function getCurrentUser(
     role: profile.role,
     email: profile.user.email,
     workspaceName: profile.workspace.name,
+    emailVerified: profile.user.emailVerified,
+    createdAt: profile.user.createdAt,
   };
   return userWithProfile;
 }
@@ -290,7 +310,9 @@ export async function getAllUsers(
     name: profile.name,
     profileId: profile.id,
     workspaceId: profile.workspaceId,
-    role: profile.role,
+    role: profile.role as Role,
+    emailVerified: profile.user.emailVerified,
+    createdAt: profile.user.createdAt,
     workspaceName: profile.workspace.name,
   }));
 }
@@ -323,6 +345,8 @@ export async function getUserById(
     workspaceId: profile.workspaceId,
     role: profile.role,
     workspaceName: profile.workspace.name,
+    emailVerified: profile.user.emailVerified,
+    createdAt: profile.user.createdAt,
   };
   return userWithProfile;
 }
@@ -394,3 +418,208 @@ export async function makeProfileDefault(
  * Create session for user
  */
 // createSession removed
+
+/**
+ * Generate a secure verification token
+ */
+async function generateVerificationToken(
+  userId: string,
+  prisma: PrismaClient
+): Promise<string> {
+  // Generate cryptographically secure random token (64 characters)
+  const token = randomBytes(32).toString("hex");
+
+  // Calculate expiration time
+  const expiresAt = new Date();
+  expiresAt.setTime(expiresAt.getTime() + EMAIL_VERIFICATION_TOKEN_EXPIRY);
+
+  // Store token in database
+  await prisma.userVerification.create({
+    data: {
+      userId,
+      token,
+      expiresAt,
+    },
+  });
+
+  return token;
+}
+
+/**
+ * Send verification email to user
+ */
+async function sendVerificationEmail(
+  userEmail: string,
+  userName: string,
+  token: string
+): Promise<void> {
+  await sendEmail(userEmail, userName, token);
+}
+
+/**
+ * Verify email verification token and mark user's email as verified.
+ * 
+ * This function validates a verification token for email verification. It performs
+ * the following checks:
+ * - Verifies the user exists
+ * - Checks if the email is already verified (returns early if so)
+ * - Validates the token matches the user and exists in the database
+ * - Checks if the token has expired
+ * 
+ * If the token is expired, it automatically generates a new token and sends
+ * a new verification email to the user. If the token is valid, it marks the
+ * user's email as verified and deletes the token (ensuring single-use).
+ * 
+ * @param {string} token - The verification token to validate
+ * @param {string} userId - The ID of the user whose email is being verified
+ * @param {PrismaClient} prisma - Prisma client instance for database operations
+ * 
+ * @returns {Promise<{emailVerified: boolean; message: string}>} An object containing:
+ *   - `emailVerified`: Boolean indicating if the email was verified (true) or if
+ *     the token was expired and a new email was sent (false)
+ *   - `message`: Human-readable message describing the result
+ * 
+ * @throws {AppError} Throws an error with code "USER_NOT_FOUND" (404) if the user
+ *   does not exist
+ * @throws {AppError} Throws an error with code "INVALID_VERIFICATION_TOKEN" (400)
+ *   if the token is invalid or doesn't match the user
+ */
+export async function verifyEmailToken(
+  token: string,
+  userId: string,
+  prisma: PrismaClient
+): Promise<{ emailVerified: boolean; message: string }> {
+  // First check if user is already verified
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { emailVerified: true },
+  });
+
+  if (!user) {
+    throw new AppError("User not found", 404, "USER_NOT_FOUND");
+  }
+
+  if (user.emailVerified) {
+    return {
+      emailVerified: true,
+      message: "Email already verified",
+    };
+  }
+
+  // Find token in database matching both token AND userId
+  const verificationToken = await prisma.userVerification.findFirst({
+    where: {
+      token,
+      userId,
+    },
+  });
+
+  if (!verificationToken) {
+    throw new AppError(
+      "Invalid verification token",
+      400,
+      "INVALID_VERIFICATION_TOKEN"
+    );
+  }
+
+  // Check if token is expired
+  const now = new Date();
+  if (verificationToken.expiresAt <= now) {
+    // Delete expired token
+    await prisma.userVerification.delete({
+      where: { id: verificationToken.id },
+    });
+
+    // Generate new token
+    const newToken = await generateVerificationToken(userId, prisma);
+
+    // Get user details for email
+    const userDetails = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { email: true, name: true },
+    });
+
+    if (userDetails) {
+      // Send new verification email
+      await sendVerificationEmail(
+        userDetails.email,
+        userDetails.name,
+        newToken
+      );
+    }
+
+    return {
+      emailVerified: false,
+      message: "Verification token has expired. A new verification email has been sent.",
+    };
+  }
+
+  // Token is valid and not expired - verify email
+  await prisma.user.update({
+    where: { id: userId },
+    data: { emailVerified: true },
+  });
+
+  // Delete token record immediately (ensures single-use)
+  await prisma.userVerification.delete({
+    where: { id: verificationToken.id },
+  });
+
+  return {
+    emailVerified: true,
+    message: "Email verified successfully!",
+  };
+}
+
+/**
+ * Resend verification email to the user.
+ * 
+ * This function sends a verification email to a user who hasn't verified their
+ * email yet. The function performs the following steps:
+ * - Checks if the user exists
+ * - Returns early if the user's email is already verified (no email sent)
+ * - Deletes any existing verification tokens for the user
+ * - Generates a new verification token
+ * - Sends the verification email with the new token
+ * 
+ * Note: This function always generates a fresh token, invalidating any previous
+ * verification tokens the user may have had.
+ * 
+ * @param {string} userId - The ID of the user to send the verification email to
+ * @param {PrismaClient} prisma - Prisma client instance for database operations
+ * 
+ * @returns {Promise<void>} Resolves when the email has been sent successfully
+ * 
+ * @throws {AppError} Throws an error with code "USER_NOT_FOUND" (404) if the
+ *   user does not exist
+ */
+export async function resendVerificationEmail(
+  userId: string,
+  prisma: PrismaClient
+): Promise<void> {
+  // Check if user is already verified
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { emailVerified: true, email: true, name: true },
+  });
+
+  if (!user) {
+    throw new AppError("User not found", 404, "USER_NOT_FOUND");
+  }
+
+  if (user.emailVerified) {
+    // User already verified, no need to resend
+    return;
+  }
+
+  // Delete any existing tokens for this user
+  await prisma.userVerification.deleteMany({
+    where: { userId },
+  });
+
+  // Generate new token
+  const token = await generateVerificationToken(userId, prisma);
+
+  // Send verification email
+  await sendVerificationEmail(user.email, user.name, token);
+}

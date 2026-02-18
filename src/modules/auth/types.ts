@@ -22,6 +22,8 @@ export interface UserResponse {
   workspaceId: string;
   workspaceName: string;
   role: string;
+  emailVerified: boolean;
+  createdAt: Date;
 }
 
 export interface AuthResponse {

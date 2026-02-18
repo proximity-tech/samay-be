@@ -29,3 +29,7 @@ export const GET_USER_BY_ID_SCHEMA = z.object({
 export const MAKE_PROFILE_DEFAULT_SCHEMA = z.object({
   workspaceId: z.string().min(1, "Workspace ID is required"),
 });
+
+export const VERIFY_EMAIL_TOKEN_SCHEMA = z.object({
+  token: z.string().min(1, "Verification token is required"),
+});
